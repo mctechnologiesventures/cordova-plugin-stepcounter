@@ -72,12 +72,14 @@ public class CordovaStepCounter extends CordovaPlugin {
 
             Log.i(TAG, "Starting StepCounterService ...");
             ContextCompat.startForegroundService(activity, stepCounterIntent);
+            callbackContext.success('started service');
         }
         else if (ACTION_STOP.equals(action)) {
             Log.i(TAG, "Stopping StepCounterService");
 
             //Stop the running step counter background service...
             activity.stopService(stepCounterIntent);
+            callbackContext.success('stopped service');
         }
         else if (ACTION_GET_STEPS.equals(action)) {
             Integer steps = StepCounterHelper.getTotalCount(activity);
