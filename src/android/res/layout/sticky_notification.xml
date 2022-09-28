@@ -18,10 +18,12 @@
         android:id="@+id/tvSteps"
         android:layout_width="match_parent"
         android:layout_height="70dp"
+        android:layout_toEndOf="@+id/ivSteps"
         android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
         android:textColor="@android:color/white"
         android:textSize="28sp"
-        android:layout_toRightOf="@+id/ivSteps"
         tools:text="15436"/>
 
 </RelativeLayout>
