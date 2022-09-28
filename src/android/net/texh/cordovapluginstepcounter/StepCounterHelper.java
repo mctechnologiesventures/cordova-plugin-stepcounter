@@ -18,7 +18,7 @@ class StepCounterHelper {
 
     //region Constants
 
-    private static final String DEFAULT_DATE_PATTERN = "yyyy-MM-dd HH:mm";
+    private static final String DEFAULT_DATE_PATTERN = "yyyy-MM-dd";
     private static final String PREFERENCE_NAME = "UserData";
     private static final String PREF_KEY_PEDOMETER_DATA = "pedometerData";
     private static final String PEDOMETER_DATA_STEPS = "steps";
