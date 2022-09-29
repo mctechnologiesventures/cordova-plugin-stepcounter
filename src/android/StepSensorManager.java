@@ -1,4 +1,4 @@
-package net.texh.cordovapluginstepcounter;
+package com.mctechnologies.cordovapluginstepcounter;
 
 import android.annotation.SuppressLint;
 import android.content.Context;

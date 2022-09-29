@@ -1,4 +1,4 @@
-package net.texh.cordovapluginstepcounter;
+package com.mctechnologies.cordovapluginstepcounter;
 
 /*
     Copyright 2015 Jarrod Linahan <jarrod@texh.net>

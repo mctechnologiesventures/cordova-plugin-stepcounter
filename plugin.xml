@@ -40,24 +40,26 @@
 
     <config-file target="res/xml/config.xml" parent="/*">
       <feature name="CordovaStepCounter">
-        <param name="android-package" value="CordovaStepCounter"/>
+        <param name="android-package" value="com.mctechnologies.cordovapluginstepcounter.CordovaStepCounter"/>
       </feature>
     </config-file>
 
     <!-- Dependencies & external libraries -->
     <framework src="com.android.support:appcompat-v7:27.0.1" />
 
-    <source-file src="src/android/CordovaStepCounter.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
-    <source-file src="src/android/StepCounterService.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
-    <source-file src="src/android/StepCounterBootReceiver.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
-    <source-file src="src/android/StepChangeListener.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
-    <source-file src="src/android/StepCounterHelper.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
-    <source-file src="src/android/StepCounterShutdownReceiver.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
-    <source-file src="src/android/StepSensorManager.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
+    <source-file src="src/android/CordovaStepCounter.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
+    <source-file src="src/android/StepCounterService.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
+    <source-file src="src/android/StepCounterBootReceiver.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
+    <source-file src="src/android/StepChangeListener.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
+    <source-file src="src/android/StepCounterHelper.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
+    <source-file src="src/android/StepCounterShutdownReceiver.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
+    <source-file src="src/android/StepSensorManager.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
 
     <source-file src="src/android/res/layout/sticky_notification.xml" target-dir="res/layout"/>
     <source-file src="src/android/res/drawable-hdpi/notification_icon.png" target-dir="res/drawable"/>
     <source-file src="src/android/res/drawable-hdpi/notification_image.png" target-dir="res/drawable"/>
+    <source-file src="src/android/res/values/strings.xml" target-dir="res/values"/>
+    <source-file src="src/android/res/values-ro/strings.xml" target-dir="res/values-ro"/>
     
   </platform>
 

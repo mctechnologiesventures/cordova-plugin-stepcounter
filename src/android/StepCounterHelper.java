@@ -1,8 +1,8 @@
-package net.texh.cordovapluginstepcounter;
+package com.mctechnologies.cordovapluginstepcounter;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import org.json.JSONObject;
 
@@ -42,90 +42,89 @@ class StepCounterHelper {
     }
 
     static int cacheSteps(int steps, String format, String key, @NonNull Context context) {
-        try {
-            int newSteps;
-            int oldSteps = 0;
-            int offset;
-            int buffer = 0;
+      try {
+          int newSteps;
+          int oldSteps = 0;
+          int offset;
+          int buffer = 0;
 
-            Date currentDate = new Date();
-            SimpleDateFormat dateFormatter = new SimpleDateFormat(format , Locale.getDefault());
+          Date currentDate = new Date();
+          SimpleDateFormat dateFormatter = new SimpleDateFormat(format , Locale.getDefault());
 
-            String currentDateString = dateFormatter.format(currentDate);
-            SharedPreferences sharedPref = CordovaStepCounter.getDefaultSharedPreferencesMultiProcess(context,
-                                                                                                    PREFERENCE_NAME);
+          String currentDateString = dateFormatter.format(currentDate);
+          SharedPreferences sharedPref = CordovaStepCounter.getDefaultSharedPreferencesMultiProcess(context,
+                                                                                                  PREFERENCE_NAME);
 
-            SharedPreferences.Editor editor = sharedPref.edit();
+          SharedPreferences.Editor editor = sharedPref.edit();
 
-            JSONObject pData = new JSONObject();
-            JSONObject newData = new JSONObject();
-            if(sharedPref.contains(key)){
-                String pDataString = sharedPref.getString(key, "{}");
-                pData = new JSONObject(pDataString);
-            }
+          JSONObject pData = new JSONObject();
+          JSONObject newData = new JSONObject();
+          if(sharedPref.contains(key)){
+              String pDataString = sharedPref.getString(key, "{}");
+              pData = new JSONObject(pDataString);
+          }
 
-            //Get the data previously stored for today
-            if (pData.has(currentDateString)) {
-                newData = pData.getJSONObject(currentDateString);
-                offset = newData.getInt(PEDOMETER_DATA_OFFSET);
-                oldSteps = newData.getInt(PEDOMETER_DATA_STEPS);
+          //Get the data previously stored for today
+          if (pData.has(currentDateString)) {
+              newData = pData.getJSONObject(currentDateString);
+              offset = newData.getInt(PEDOMETER_DATA_OFFSET);
+              oldSteps = newData.getInt(PEDOMETER_DATA_STEPS);
 
-                if (newData.has(PEDOMETER_DATA_DAILY_BUFFER)) //Backward compatibility check!
-                    buffer = newData.getInt(PEDOMETER_DATA_DAILY_BUFFER);
+              if (newData.has(PEDOMETER_DATA_DAILY_BUFFER)) //Backward compatibility check!
+                  buffer = newData.getInt(PEDOMETER_DATA_DAILY_BUFFER);
 
-                //Data validation/correction and normalization...
-                int delta = (steps - offset + buffer) - oldSteps;
-                if(delta < 0) {
-                    //We didn't save day's buffer properly!
-                    buffer += (Math.abs(delta) + 1);
-                }
+              //Data validation/correction and normalization...
+              int delta = (steps - offset + buffer) - oldSteps;
+              if(delta < 0) {
+                  //We didn't save day's buffer properly!
+                  buffer += (Math.abs(delta) + 1);
+              }
 
-            } else {
-                Calendar calendar = getPreviousDate();
-                String previousDateString = dateFormatter.format(calendar.getTime());
+          } else {
+              Calendar calendar = getPreviousDate(key);
+              String previousDateString = dateFormatter.format(calendar.getTime());
 
-                if(pData.has(previousDateString)) {
-                    //Try to fetch the offset from previous data, if any....
-                    JSONObject previousData = pData.getJSONObject(previousDateString);
-                    offset = previousData.getInt(PEDOMETER_DATA_OFFSET) +
-                                previousData.getInt(PEDOMETER_DATA_STEPS);
+              if(pData.has(previousDateString)) {
+                  //Try to fetch the offset from previous data, if any....
+                  JSONObject previousData = pData.getJSONObject(previousDateString);
+                  offset = previousData.getInt(PEDOMETER_DATA_OFFSET) +
+                              previousData.getInt(PEDOMETER_DATA_STEPS);
 
-                    if (previousData.has(PEDOMETER_DATA_DAILY_BUFFER))
-                        buffer = previousData.getInt(PEDOMETER_DATA_DAILY_BUFFER);
-                }
-                else
-                    //Change offset for current count...
-                    offset = steps - oldSteps;
-            }
+                  if (previousData.has(PEDOMETER_DATA_DAILY_BUFFER))
+                      buffer = previousData.getInt(PEDOMETER_DATA_DAILY_BUFFER);
+              }
+              else
+                  //Change offset for current count...
+                  offset = steps - oldSteps;
+          }
 
-            //Calculate the new steps ....
-            newSteps = steps - offset + buffer;
+          //Calculate the new steps ....
+          newSteps = steps - offset + buffer;
 
-            if(newSteps < 0)
-                return oldSteps; //Something went wrong, don't save false values!
+          if(newSteps < 0)
+              return oldSteps; //Something went wrong, don't save false values!
 
-            //Calculate the total steps...
-            int stepsCounted = getTotalCount(context);
-            stepsCounted += (newSteps - oldSteps);
-            setTotalCount(context, stepsCounted);
+          //Calculate the total steps...
+          int stepsCounted = getTotalCount(context);
+          stepsCounted += (newSteps - oldSteps);
+          setTotalCount(context, stepsCounted);
 
-            //Save calculated values to SharedPreferences
-            newData.put(PEDOMETER_DATA_STEPS, newSteps);
-            newData.put(PEDOMETER_DATA_OFFSET, offset);
-            newData.put(PEDOMETER_DATA_DAILY_BUFFER, buffer);
-            pData.put(currentDateString, newData);
+          //Save calculated values to SharedPreferences
+          newData.put(PEDOMETER_DATA_STEPS, newSteps);
+          newData.put(PEDOMETER_DATA_OFFSET, offset);
+          newData.put(PEDOMETER_DATA_DAILY_BUFFER, buffer);
+          pData.put(currentDateString, newData);
 
-            editor.putString(key, pData.toString());
-            editor.apply();
+          editor.putString(key, pData.toString());
+          editor.apply();
 
-            return newSteps;
-        }
-        catch (Exception ex) {
-            ex.printStackTrace();
-        }
+          return newSteps;
+      }
+      catch (Exception ex) {
+          ex.printStackTrace();
+      }
 
-        return 0;
-        }
+      return 0;
     }
 
     static int saveSteps(float sensorValue, @NonNull Context context) {

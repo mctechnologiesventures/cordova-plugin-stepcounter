@@ -1,4 +1,4 @@
-package net.texh.cordovapluginstepcounter;
+package com.mctechnologies.cordovapluginstepcounter;
 
 /**
  * Created by Digitalsunray Media GmbH. On 20.07.2018.
