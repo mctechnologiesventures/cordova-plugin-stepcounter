@@ -203,12 +203,11 @@ public class StepCounterService extends Service implements StepChangeListener {
         RemoteViews views = new RemoteViews(getPackageName(), getResources().getIdentifier( "sticky_notification",
                                                                                             "layout",
                                                                                             getPackageName()));
-
+        String dailySteps = getResources().getString(R.string.daily_steps);
+        String stepsString = dailySteps + String.format(  Locale.getDefault(), STEPS_TEXT_FORMAT, StepCounterHelper.getTodaySteps(this));
         views.setTextViewText(getResources().getIdentifier( "tvSteps",
                                                             "id",
-                                                            getPackageName()),
-                                                            String.format(  Locale.getDefault(), STEPS_TEXT_FORMAT,
-                                                                            StepCounterHelper.getTodaySteps(this)));
+                                                            getPackageName()), stepsString);
         builder.setCustomContentView(views);
 
         Notification notification = builder.build();
@@ -223,10 +222,12 @@ public class StepCounterService extends Service implements StepChangeListener {
         RemoteViews views = new RemoteViews(getPackageName(), getResources().getIdentifier( "sticky_notification",
                                                                                             "layout",
                                                                                             getPackageName()));
+        String dailySteps = getResources().getString(R.string.daily_steps);
+        String stepsString = dailySteps + String.format(  Locale.getDefault(), STEPS_TEXT_FORMAT, StepCounterHelper.getTodaySteps(this));
         views.setTextViewText(getResources().getIdentifier( "tvSteps",
                                                             "id",
                                                             getPackageName()),
-                                                            String.format(Locale.getDefault(), STEPS_TEXT_FORMAT, steps));
+                                                            stepsString);
         builder.setCustomContentView(views);
 
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
