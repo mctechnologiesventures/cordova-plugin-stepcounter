@@ -89,8 +89,8 @@ public class CordovaStepCounter extends CordovaPlugin {
         }
         else if (ACTION_GET_TODAY_STEPS.equals(action)) {
             SharedPreferences sharedPref = getDefaultSharedPreferencesMultiProcess(activity,"UserData");
-            if(sharedPref.contains("pedometerData")){
-                String pDataString = sharedPref.getString("pedometerData", "{}");
+            if(sharedPref.contains("pedometerDayData")){
+                String pDataString = sharedPref.getString("pedometerDayData", "{}");
 
                 Date currentDate = new Date();
                 SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
@@ -123,8 +123,8 @@ public class CordovaStepCounter extends CordovaPlugin {
             }
         } else if(ACTION_GET_HISTORY.equals(action)){
             SharedPreferences sharedPref = getDefaultSharedPreferencesMultiProcess(activity,"UserData");
-            if(sharedPref.contains("pedometerData")){
-                String pDataString = sharedPref.getString("pedometerData","{}");
+            if(sharedPref.contains("pedometerHistoryData")){
+                String pDataString = sharedPref.getString("pedometerHistoryData","{}");
                 Log.i(TAG, "Getting steps history from stepCounterService: " + pDataString);
                 callbackContext.success(pDataString);
             }else{

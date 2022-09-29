@@ -19,8 +19,10 @@ class StepCounterHelper {
     //region Constants
 
     private static final String DEFAULT_DATE_PATTERN = "yyyy-MM-dd";
+    private static final String DEFAULT_DATE_HISTORY_PATTERN = "yyyy-MM-dd HH";
     private static final String PREFERENCE_NAME = "UserData";
-    private static final String PREF_KEY_PEDOMETER_DATA = "pedometerData";
+    private static final String PREF_KEY_PEDOMETER_DATA = "pedometerDayData";
+    private static final String PREF_KEY_PEDOMETER_HISTORY_DATA = "pedometerHistoryData";
     private static final String PEDOMETER_DATA_STEPS = "steps";
     private static final String PEDOMETER_DATA_OFFSET = "offset";
     private static final String PEDOMETER_DATA_DAILY_BUFFER = "buffer";
@@ -29,16 +31,25 @@ class StepCounterHelper {
 
     //region Static Methods
 
-    static int saveSteps(float sensorValue, @NonNull Context context) {
+    static Calendar getPreviousDate(String key) {
+        Calendar calendar = Calendar.getInstance();
+        if (key == PREF_KEY_PEDOMETER_HISTORY_DATA) {
+            calendar.add(Calendar.HOUR_OF_DAY, -1);
+            return calendar;
+        }
+        calendar.add(Calendar.DATE, -1);
+        return calendar;
+    }
+
+    static int cacheSteps(int steps, String format, String key, @NonNull Context context) {
         try {
-            int steps = Math.round(sensorValue);
-            int daySteps;
-            int oldDaySteps = 0;
-            int dayOffset;
-            int dayBuffer = 0;
+            int newSteps;
+            int oldSteps = 0;
+            int offset;
+            int buffer = 0;
 
             Date currentDate = new Date();
-            SimpleDateFormat dateFormatter = new SimpleDateFormat(DEFAULT_DATE_PATTERN , Locale.getDefault());
+            SimpleDateFormat dateFormatter = new SimpleDateFormat(format , Locale.getDefault());
 
             String currentDateString = dateFormatter.format(currentDate);
             SharedPreferences sharedPref = CordovaStepCounter.getDefaultSharedPreferencesMultiProcess(context,
@@ -47,67 +58,81 @@ class StepCounterHelper {
             SharedPreferences.Editor editor = sharedPref.edit();
 
             JSONObject pData = new JSONObject();
-            JSONObject dayData = new JSONObject();
-            if(sharedPref.contains(PREF_KEY_PEDOMETER_DATA)){
-                String pDataString = sharedPref.getString(PREF_KEY_PEDOMETER_DATA,"{}");
+            JSONObject newData = new JSONObject();
+            if(sharedPref.contains(key)){
+                String pDataString = sharedPref.getString(key, "{}");
                 pData = new JSONObject(pDataString);
             }
 
             //Get the data previously stored for today
             if (pData.has(currentDateString)) {
-                dayData = pData.getJSONObject(currentDateString);
-                dayOffset = dayData.getInt(PEDOMETER_DATA_OFFSET);
-                oldDaySteps = dayData.getInt(PEDOMETER_DATA_STEPS);
+                newData = pData.getJSONObject(currentDateString);
+                offset = newData.getInt(PEDOMETER_DATA_OFFSET);
+                oldSteps = newData.getInt(PEDOMETER_DATA_STEPS);
 
-                if (dayData.has(PEDOMETER_DATA_DAILY_BUFFER)) //Backward compatibility check!
-                    dayBuffer = dayData.getInt(PEDOMETER_DATA_DAILY_BUFFER);
+                if (newData.has(PEDOMETER_DATA_DAILY_BUFFER)) //Backward compatibility check!
+                    buffer = newData.getInt(PEDOMETER_DATA_DAILY_BUFFER);
 
                 //Data validation/correction and normalization...
-                int delta = (steps - dayOffset + dayBuffer) - oldDaySteps;
+                int delta = (steps - offset + buffer) - oldSteps;
                 if(delta < 0) {
                     //We didn't save day's buffer properly!
-                    dayBuffer += (Math.abs(delta) + 1);
+                    buffer += (Math.abs(delta) + 1);
                 }
 
             } else {
-                Calendar calendar = Calendar.getInstance();
-                calendar.add(Calendar.DATE, -1);
-                String yesterdayDateString = dateFormatter.format(calendar.getTime());
+                Calendar calendar = getPreviousDate();
+                String previousDateString = dateFormatter.format(calendar.getTime());
 
-                if(pData.has(yesterdayDateString)) {
-                    //Try to fetch the offset from Yesterday data, if any....
-                    JSONObject yesterdayData = pData.getJSONObject(yesterdayDateString);
-                    dayOffset = yesterdayData.getInt(PEDOMETER_DATA_OFFSET) +
-                                yesterdayData.getInt(PEDOMETER_DATA_STEPS);
+                if(pData.has(previousDateString)) {
+                    //Try to fetch the offset from previous data, if any....
+                    JSONObject previousData = pData.getJSONObject(previousDateString);
+                    offset = previousData.getInt(PEDOMETER_DATA_OFFSET) +
+                                previousData.getInt(PEDOMETER_DATA_STEPS);
 
-                    if (yesterdayData.has(PEDOMETER_DATA_DAILY_BUFFER))
-                        dayBuffer = yesterdayData.getInt(PEDOMETER_DATA_DAILY_BUFFER);
+                    if (previousData.has(PEDOMETER_DATA_DAILY_BUFFER))
+                        buffer = previousData.getInt(PEDOMETER_DATA_DAILY_BUFFER);
                 }
                 else
                     //Change offset for current count...
-                    dayOffset = steps - oldDaySteps;
+                    offset = steps - oldSteps;
             }
 
-            //Calculate the today's step ....
-            daySteps = steps - dayOffset + dayBuffer;
+            //Calculate the new steps ....
+            newSteps = steps - offset + buffer;
 
-            if(daySteps < 0)
-                return oldDaySteps; //Something went wrong, don't save false values!
+            if(newSteps < 0)
+                return oldSteps; //Something went wrong, don't save false values!
 
             //Calculate the total steps...
             int stepsCounted = getTotalCount(context);
-            stepsCounted += (daySteps - oldDaySteps);
+            stepsCounted += (newSteps - oldSteps);
             setTotalCount(context, stepsCounted);
 
             //Save calculated values to SharedPreferences
-            dayData.put(PEDOMETER_DATA_STEPS, daySteps);
-            dayData.put(PEDOMETER_DATA_OFFSET, dayOffset);
-            dayData.put(PEDOMETER_DATA_DAILY_BUFFER, dayBuffer);
-            pData.put(currentDateString, dayData);
+            newData.put(PEDOMETER_DATA_STEPS, newSteps);
+            newData.put(PEDOMETER_DATA_OFFSET, offset);
+            newData.put(PEDOMETER_DATA_DAILY_BUFFER, buffer);
+            pData.put(currentDateString, newData);
 
-            editor.putString(PREF_KEY_PEDOMETER_DATA, pData.toString());
+            editor.putString(key, pData.toString());
             editor.apply();
 
+            return newSteps;
+        }
+        catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+        return 0;
+        }
+    }
+
+    static int saveSteps(float sensorValue, @NonNull Context context) {
+        try {
+            int steps = Math.round(sensorValue);
+            int daySteps = cacheSteps(steps, DEFAULT_DATE_PATTERN, PREF_KEY_PEDOMETER_DATA, context);
+            cacheSteps(steps, DEFAULT_DATE_HISTORY_PATTERN, PREF_KEY_PEDOMETER_HISTORY_DATA, context);
             return daySteps;
         }
         catch (Exception ex) {
@@ -187,6 +212,25 @@ class StepCounterHelper {
                         data.put(currentDateString, dayData);
 
                         editor.putString(PREF_KEY_PEDOMETER_DATA, data.toString());
+                        editor.apply();
+                    }
+                }
+            }
+
+            if(sharedPref.contains(PREF_KEY_PEDOMETER_HISTORY_DATA)){
+                JSONObject data = new JSONObject(sharedPref.getString(PREF_KEY_PEDOMETER_HISTORY_DATA,"{}"));
+                if (data.has(currentDateString)) {
+                    JSONObject historyData = data.getJSONObject(currentDateString);
+                    int steps = historyData.getInt(PEDOMETER_DATA_STEPS);
+
+                    if(steps >= 0) {
+                        //Save calculated values to the private preferences ...
+                        historyData.put(PEDOMETER_DATA_STEPS, steps);
+                        historyData.put(PEDOMETER_DATA_OFFSET, 0);
+                        historyData.put(PEDOMETER_DATA_DAILY_BUFFER, steps);
+                        data.put(currentDateString, historyData);
+
+                        editor.putString(PREF_KEY_PEDOMETER_HISTORY_DATA, data.toString());
                         editor.apply();
                     }
                 }
