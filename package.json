@@ -1,15 +1,15 @@
 {
-  "name": "net.texh.cordovapluginstepcounter",
-  "version": "0.0.11",
+  "name": "cordova-plugin-mc-stepcounter",
+  "version": "0.1.0",
   "cordova": {
-    "id": "net-texh-cordovapluginstepcounter",
+    "id": "cordova-plugin-mc-stepcounter",
     "platforms": [
       "android"
     ]
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/DigitalsunrayMedia/cordova-plugin-stepcounter.git"
+    "url": "git+https://github.com/rvcarlig/cordova-plugin-stepcounter.git"
   },
   "keywords": [
     "cordova",
@@ -29,6 +29,6 @@
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/DigitalsunrayMedia/cordova-plugin-stepcounter/issues"
+    "url": "https://github.com/rvcarlig/cordova-plugin-stepcounter/issues"
   }
 }

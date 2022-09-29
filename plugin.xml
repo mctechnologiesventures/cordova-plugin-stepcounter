@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
-        id="net.texh.cordovapluginstepcounter"
-        version="0.0.10">
+        id="cordova-plugin-mc-stepcounter"
+        version="0.1.0">
 
-  <name>Cordova Step Counter Plugin</name>
+  <name>Cordova MC Step Counter Plugin</name>
+  <repo>https://github.com/rvcarlig/cordova-plugin-stepcounter</repo>
 
   <engines>
     <engine name="cordova" version=">=3.4.0"/>
@@ -18,13 +19,13 @@
   <platform name="android">
 
     <config-file target="AndroidManifest.xml" parent="/manifest/application">
-        <service android:name="net.texh.cordovapluginstepcounter.StepCounterService" android:enabled="true" android:process=":cordovapluginstepcounter" />
+        <service android:name="StepCounterService" android:enabled="true" android:process=":cordovapluginstepcounter" />
 
         <!--
              * This class is triggered upon reboot of the device. It needs to re-register
              * the STEP_COUNTER with the StepCounterService
              -->
-        <receiver android:name="net.texh.cordovapluginstepcounter.StepCounterBootReceiver" >
+        <receiver android:name="StepCounterBootReceiver" >
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
@@ -39,20 +40,20 @@
 
     <config-file target="res/xml/config.xml" parent="/*">
       <feature name="CordovaStepCounter">
-        <param name="android-package" value="net.texh.cordovapluginstepcounter.CordovaStepCounter"/>
+        <param name="android-package" value="CordovaStepCounter"/>
       </feature>
     </config-file>
 
     <!-- Dependencies & external libraries -->
     <framework src="com.android.support:appcompat-v7:27.0.1" />
 
-    <source-file src="src/android/net/texh/cordovapluginstepcounter/CordovaStepCounter.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
-    <source-file src="src/android/net/texh/cordovapluginstepcounter/StepCounterService.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
-    <source-file src="src/android/net/texh/cordovapluginstepcounter/StepCounterBootReceiver.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
-    <source-file src="src/android/net/texh/cordovapluginstepcounter/StepChangeListener.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
-    <source-file src="src/android/net/texh/cordovapluginstepcounter/StepCounterHelper.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
-    <source-file src="src/android/net/texh/cordovapluginstepcounter/StepCounterShutdownReceiver.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
-    <source-file src="src/android/net/texh/cordovapluginstepcounter/StepSensorManager.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
+    <source-file src="src/android/CordovaStepCounter.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
+    <source-file src="src/android/StepCounterService.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
+    <source-file src="src/android/StepCounterBootReceiver.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
+    <source-file src="src/android/StepChangeListener.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
+    <source-file src="src/android/StepCounterHelper.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
+    <source-file src="src/android/StepCounterShutdownReceiver.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
+    <source-file src="src/android/StepSensorManager.java" target-dir="src/net/texh/cordovapluginstepcounter/"/>
 
     <source-file src="src/android/res/layout/sticky_notification.xml" target-dir="res/layout"/>
     <source-file src="src/android/res/drawable-hdpi/notification_icon.png" target-dir="res/drawable"/>

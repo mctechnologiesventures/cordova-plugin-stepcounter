@@ -67,6 +67,7 @@ public class CordovaStepCounter extends CordovaPlugin {
         else if (ACTION_START.equals(action)) {
             if(!deviceHasStepCounter(activity.getPackageManager())){
                 Log.i(TAG, "Step detector not supported");
+                callbackContext.error("Step detector not supported");
                 return true;
             }
 
