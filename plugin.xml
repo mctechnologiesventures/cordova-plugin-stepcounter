@@ -59,6 +59,9 @@
     <source-file src="src/android/res/drawable-hdpi/notification_icon.png" target-dir="res/drawable"/>
     <source-file src="src/android/res/drawable-hdpi/notification_image.png" target-dir="res/drawable"/>
     <source-file src="src/android/res/values/strings.xml" target-dir="res/values"/>
+    <config-file target="res/values/strings.xml" parent="/*">
+        <string name="daily_steps">Daily steps:</string>
+    </config-file> 
     <source-file src="src/android/res/values-ro/strings.xml" target-dir="res/values-ro"/>
     
   </platform>
