@@ -203,7 +203,7 @@ public class StepCounterService extends Service implements StepChangeListener {
         RemoteViews views = new RemoteViews(getPackageName(), getResources().getIdentifier( "sticky_notification",
                                                                                             "layout",
                                                                                             getPackageName()));
-        String dailySteps = getResources().getString(R.string.daily_steps);
+        String dailySteps = "Daily steps: "; //getResources().getString(R.string.daily_steps);
         String stepsString = dailySteps + String.format(  Locale.getDefault(), STEPS_TEXT_FORMAT, StepCounterHelper.getTodaySteps(this));
         views.setTextViewText(getResources().getIdentifier( "tvSteps",
                                                             "id",
@@ -222,7 +222,7 @@ public class StepCounterService extends Service implements StepChangeListener {
         RemoteViews views = new RemoteViews(getPackageName(), getResources().getIdentifier( "sticky_notification",
                                                                                             "layout",
                                                                                             getPackageName()));
-        String dailySteps = getResources().getString(R.string.daily_steps);
+        String dailySteps = "Daily steps: "; //getResources().getString(R.string.daily_steps);
         String stepsString = dailySteps + String.format(  Locale.getDefault(), STEPS_TEXT_FORMAT, StepCounterHelper.getTodaySteps(this));
         views.setTextViewText(getResources().getIdentifier( "tvSteps",
                                                             "id",
