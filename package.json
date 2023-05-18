@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rvcarlig/cordova-plugin-stepcounter.git"
+    "url": "git+https://github.com/mctechnologiesventures/cordova-plugin-stepcounter.git"
   },
   "keywords": [
     "cordova",
@@ -29,6 +29,6 @@
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/rvcarlig/cordova-plugin-stepcounter/issues"
+    "url": "https://github.com/mctechnologiesventures/cordova-plugin-stepcounter/issues"
   }
 }

@@ -4,7 +4,7 @@
         version="0.1.0">
 
   <name>Cordova MC Step Counter Plugin</name>
-  <repo>https://github.com/rvcarlig/cordova-plugin-stepcounter</repo>
+  <repo>https://github.com/mctechnologiesventures/cordova-plugin-stepcounter</repo>
 
   <engines>
     <engine name="cordova" version=">=3.4.0"/>

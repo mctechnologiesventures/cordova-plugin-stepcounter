@@ -1,7 +1,7 @@
 package com.mctechnologies.cordovapluginstepcounter;
 
 /*
-    Copyright 2015 Jarrod Linahan <jarrod@texh.net>
+    Copyright 2015 MCTechnologiesVentures <system@wellnessentially.com>
 
     Permission is hereby granted, free of charge, to any person obtaining
     a copy of this software and associated documentation files (the
