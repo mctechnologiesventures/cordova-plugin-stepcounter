@@ -1,3 +1,4 @@
 <resources>
     <string name="daily_steps">Daily steps:</string>
+    <string name="activity">Step counter is running</string>
 </resources>

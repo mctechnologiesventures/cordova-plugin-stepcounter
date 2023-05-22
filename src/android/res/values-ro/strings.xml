@@ -1,3 +1,4 @@
 <resources>
     <string name="daily_steps">Pași zilnici:</string>
+    <string name="activity">Contorul de pași rulează</string>
 </resources>

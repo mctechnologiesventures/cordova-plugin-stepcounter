@@ -41,6 +41,8 @@ import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.RemoteViews;
 
+import com.mhsolutions.dev.getvealth.R;
+
 import java.util.Locale;
 
 public class StepCounterService extends Service implements StepChangeListener {
@@ -203,11 +205,10 @@ public class StepCounterService extends Service implements StepChangeListener {
         RemoteViews views = new RemoteViews(getPackageName(), getResources().getIdentifier( "sticky_notification",
                                                                                             "layout",
                                                                                             getPackageName()));
-        String dailySteps = "Daily steps: "; //getResources().getString(R.string.daily_steps);
-        String stepsString = dailySteps + String.format(  Locale.getDefault(), STEPS_TEXT_FORMAT, StepCounterHelper.getTodaySteps(this));
+        String dailySteps = getResources().getString(R.string.activity);
         views.setTextViewText(getResources().getIdentifier( "tvSteps",
                                                             "id",
-                                                            getPackageName()), stepsString);
+                                                            getPackageName()), dailySteps);
         builder.setCustomContentView(views);
 
         Notification notification = builder.build();
@@ -222,12 +223,11 @@ public class StepCounterService extends Service implements StepChangeListener {
         RemoteViews views = new RemoteViews(getPackageName(), getResources().getIdentifier( "sticky_notification",
                                                                                             "layout",
                                                                                             getPackageName()));
-        String dailySteps = "Daily steps: "; //getResources().getString(R.string.daily_steps);
-        String stepsString = dailySteps + String.format(  Locale.getDefault(), STEPS_TEXT_FORMAT, StepCounterHelper.getTodaySteps(this));
+        String dailySteps = getResources().getString(R.string.activity);
         views.setTextViewText(getResources().getIdentifier( "tvSteps",
                                                             "id",
                                                             getPackageName()),
-                                                            stepsString);
+                                                            dailySteps);
         builder.setCustomContentView(views);
 
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
