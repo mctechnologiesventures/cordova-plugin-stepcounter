@@ -41,8 +41,6 @@ import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.RemoteViews;
 
-import com.mhsolutions.dev.getvealth.R;
-
 import java.util.Locale;
 
 public class StepCounterService extends Service implements StepChangeListener {
@@ -205,7 +203,7 @@ public class StepCounterService extends Service implements StepChangeListener {
         RemoteViews views = new RemoteViews(getPackageName(), getResources().getIdentifier( "sticky_notification",
                                                                                             "layout",
                                                                                             getPackageName()));
-        String dailySteps = getResources().getString(R.string.activity);
+        String dailySteps = "Wellnessentially Service";
         views.setTextViewText(getResources().getIdentifier( "tvSteps",
                                                             "id",
                                                             getPackageName()), dailySteps);
@@ -223,7 +221,7 @@ public class StepCounterService extends Service implements StepChangeListener {
         RemoteViews views = new RemoteViews(getPackageName(), getResources().getIdentifier( "sticky_notification",
                                                                                             "layout",
                                                                                             getPackageName()));
-        String dailySteps = getResources().getString(R.string.activity);
+        String dailySteps = "Wellnessentially Service";
         views.setTextViewText(getResources().getIdentifier( "tvSteps",
                                                             "id",
                                                             getPackageName()),
