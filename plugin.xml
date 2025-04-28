@@ -58,13 +58,17 @@
 
     <resource-file
       src="src/android/res/layout/sticky_notification.xml"
-      target="res/layout/sticky_notification.xml" />
-    <resource-file
-      src="src/android/res/values/strings.xml"
-      target="res/values/strings.xml" />
-    <resource-file
-      src="src/android/res/values-ro/strings.xml"
-      target="res/values-ro/strings.xml" />
+      target="res/layout/sticky_notification.xml" /> 
+
+    <config-file parent="/resources" target="app/src/main/res/values/strings.xml">
+        <string name="mct_sc_notification_title">Daily steps</string>
+        <string name="mct_sc_notification_steps">Steps: %1$d</string>
+    </config-file>
+
+    <config-file parent="/resources" target="app/src/main/res/values-ro/strings.xml">
+        <string name="mct_sc_notification_title">Contor pași</string>
+        <string name="mct_sc_notification_steps">Pași: %1$d</string>
+    </config-file>
     
   </platform>
 

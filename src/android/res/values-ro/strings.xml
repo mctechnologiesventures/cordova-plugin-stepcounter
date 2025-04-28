@@ -1,6 +1,0 @@
-<resources>
-    <string name="daily_steps">Pași zilnici:</string>
-    <string name="notification_title">Contor pași</string>
-    <string name="notification_icon_desc">Iconiță notificare</string>
-    <string name="notification_steps">Pași: %1$d</string>
-</resources>

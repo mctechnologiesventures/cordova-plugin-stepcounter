@@ -1,6 +1,0 @@
-<resources>
-    <string name="daily_steps">Daily steps:</string>
-    <string name="notification_title">Daily steps</string>
-    <string name="notification_icon_desc">Notification icon</string>
-    <string name="notification_steps">Steps: %1$d</string>
-</resources>

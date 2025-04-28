@@ -223,7 +223,7 @@ public class StepCounterService extends Service implements StepChangeListener {
           "id",
           getPackageName()), appName);
 
-      int id = getResources().getIdentifier("notification_steps", "string", getPackageName());
+      int id = getResources().getIdentifier("mct_sc_notification_steps", "string", getPackageName());
       String stepsText = String.format(getString(id), 0);
       views.setTextViewText(getResources().getIdentifier( "tvSteps",
         "id",
@@ -249,7 +249,7 @@ public class StepCounterService extends Service implements StepChangeListener {
           "id",
           getPackageName()), appName);
 
-      int id = getResources().getIdentifier("notification_steps", "string", getPackageName());
+      int id = getResources().getIdentifier("mct_sc_notification_steps", "string", getPackageName());
       String stepsText = String.format(getString(id), steps);
       views.setTextViewText(getResources().getIdentifier( "tvSteps",
         "id",
