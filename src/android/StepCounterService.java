@@ -279,6 +279,7 @@ public class StepCounterService extends Service implements StepChangeListener {
         channel.setVibrationPattern(new long[]{0});
         channel.enableVibration(false);
         channel.setSound(null, null);
+        channel.setShowBadge(false);
         mgr.createNotificationChannel(channel);
       }
 
