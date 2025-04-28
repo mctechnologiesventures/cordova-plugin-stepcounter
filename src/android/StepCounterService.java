@@ -24,6 +24,7 @@ package com.mctechnologies.cordovapluginstepcounter;
 
  */
 
+import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -33,11 +34,13 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.IBinder;
-import android.support.annotation.NonNull;
-import android.support.v4.app.NotificationCompat;
+import androidx.annotation.NonNull;
+import androidx.core.app.NotificationCompat;
 import android.util.Log;
 import android.widget.RemoteViews;
 
@@ -48,8 +51,6 @@ public class StepCounterService extends Service implements StepChangeListener {
     //region Constants
 
     private static final int NOTIFICATION_ID = 777;
-    private static final String STEPS_TEXT_FORMAT = "%,d";
-
     //endregion
 
     //region Variables
@@ -84,10 +85,15 @@ public class StepCounterService extends Service implements StepChangeListener {
         AlarmManager manager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
 
         if(manager != null) {
-            PendingIntent stepIntent = PendingIntent.getService(getApplicationContext(),
+            int baseFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+              baseFlags |= PendingIntent.FLAG_IMMUTABLE;
+            }
+
+          PendingIntent stepIntent = PendingIntent.getService(getApplicationContext(),
                                                                 10,
                                                                 newServiceIntent,
-                                                                PendingIntent.FLAG_UPDATE_CURRENT);
+            baseFlags);
             manager.set(AlarmManager.RTC, java.lang.System.currentTimeMillis() + 1000 * 60 * 60, stepIntent);
         }
 
@@ -160,9 +166,14 @@ public class StepCounterService extends Service implements StepChangeListener {
         //Auto-Relaunch the service....
         Intent newServiceIntent = new Intent(this,StepCounterService.class);
         AlarmManager manager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        if (manager != null)//Restart the service after around Ten seconds!
-            manager.set(AlarmManager.RTC, System.currentTimeMillis() + 10000,
-                        PendingIntent.getService(this, 11, newServiceIntent, 0));
+        if (manager != null) {//Restart the service after around Ten seconds!
+          int baseFlags = 0;
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            baseFlags |= PendingIntent.FLAG_IMMUTABLE;
+          }
+          manager.set(AlarmManager.RTC, System.currentTimeMillis() + 10000,
+            PendingIntent.getService(this, 11, newServiceIntent, baseFlags));
+        }
 
         return super.stopService(intent);
     }
@@ -178,54 +189,71 @@ public class StepCounterService extends Service implements StepChangeListener {
     //region Methods
 
     /* Used to build and start foreground service. */
+    @SuppressLint("DiscouragedApi")
     private void startForegroundService()
     {
         Log.d(TAG, "StepCounterService: Starting the foreground service...");
-
-        builder = new NotificationCompat.Builder(this, createChannel());
-
-        builder.setSmallIcon(getResources().getIdentifier(  "notification_icon",
-                                                            "drawable",
-                                                            getPackageName()));
-        builder.setAutoCancel(false);
-        builder.setOngoing(true);
-        builder.setPriority(Notification.PRIORITY_MAX);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-            builder.setVisibility(Notification.VISIBILITY_PUBLIC);
-
-        //handle notification click, open main activity
-        Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 1110, intent,
-                                                                PendingIntent.FLAG_UPDATE_CURRENT);
-        builder.setContentIntent(pendingIntent);
+        PackageManager pm = getPackageManager();
+        ApplicationInfo appInfo = getApplicationInfo();
+        String appName = pm.getApplicationLabel(appInfo).toString();
+        int appIconRes = appInfo.icon;
+        int baseFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+          baseFlags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        builder = new NotificationCompat.Builder(this, createChannel())
+          .setSmallIcon(appIconRes)
+          .setContentTitle(appName)   // shown if the system decides not to use your custom RemoteViews
+          .setOngoing(true)
+          .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+          .setPriority(NotificationCompat.PRIORITY_MAX)
+          .setContentIntent(
+            PendingIntent.getActivity(
+              this, 1110,
+              getPackageManager().getLaunchIntentForPackage(getPackageName()),
+              baseFlags
+            )
+          );
 
         //custom notification UI...
         RemoteViews views = new RemoteViews(getPackageName(), getResources().getIdentifier( "sticky_notification",
                                                                                             "layout",
                                                                                             getPackageName()));
-        String dailySteps = "Wellnessentially Step Counter";
-        views.setTextViewText(getResources().getIdentifier( "tvSteps",
-                                                            "id",
-                                                            getPackageName()), dailySteps);
-        builder.setCustomContentView(views);
+        views.setTextViewText(getResources().getIdentifier( "tvTitle",
+          "id",
+          getPackageName()), appName);
 
-        Notification notification = builder.build();
+      int id = getResources().getIdentifier("notification_steps", "string", getPackageName());
+      String stepsText = String.format(getString(id), 0);
+      views.setTextViewText(getResources().getIdentifier( "tvSteps",
+        "id",
+        getPackageName()), stepsText);
+      builder.setCustomContentView(views);
 
-        // Start foreground service...
-        startForeground(NOTIFICATION_ID, notification);
+      Notification notification = builder.build();
+
+      // Start foreground service...
+      startForeground(NOTIFICATION_ID, notification);
     }
 
+    @SuppressLint("DiscouragedApi")
     private void updateNotification(int steps){
         Log.d(TAG, "StepCounterService: Updating the notification ...");
-
+        PackageManager pm = getPackageManager();
+        ApplicationInfo appInfo = getApplicationInfo();
+        String appName = pm.getApplicationLabel(appInfo).toString();
         RemoteViews views = new RemoteViews(getPackageName(), getResources().getIdentifier( "sticky_notification",
                                                                                             "layout",
                                                                                             getPackageName()));
-        String dailySteps = "Wellnessentially Step Counter";
-        views.setTextViewText(getResources().getIdentifier( "tvSteps",
-                                                            "id",
-                                                            getPackageName()),
-                                                            dailySteps);
+        views.setTextViewText(getResources().getIdentifier( "tvTitle",
+          "id",
+          getPackageName()), appName);
+
+      int id = getResources().getIdentifier("notification_steps", "string", getPackageName());
+      String stepsText = String.format(getString(id), steps);
+      views.setTextViewText(getResources().getIdentifier( "tvSteps",
+        "id",
+        getPackageName()), stepsText);
         builder.setCustomContentView(views);
 
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -235,20 +263,30 @@ public class StepCounterService extends Service implements StepChangeListener {
 
     @NonNull
     private String createChannel() {
-        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+      String channelId   = getPackageName() + ".steps";
+      String channelName = "Step Counter Updates";
 
-        if(manager != null && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(  getPackageName(), getPackageName(),
-                                                                    NotificationManager.IMPORTANCE_LOW);
+      NotificationManager mgr =
+        (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
-            channel.enableLights(false);
-            manager.createNotificationChannel(channel);
-        }
+      if (mgr != null) {
+        NotificationChannel channel = new NotificationChannel(
+          channelId,
+          channelName,
+          NotificationManager.IMPORTANCE_HIGH    // ← HIGH for heads-up
+        );
+        channel.enableLights(false);
+        channel.setVibrationPattern(new long[]{0});
+        channel.enableVibration(false);
+        channel.setSound(null, null);
+        mgr.createNotificationChannel(channel);
+      }
 
-        return getPackageName();
+      return channelId;
     }
 
-    //endregion
+
+  //endregion
 
     //region Sensor Event Handlers
 
