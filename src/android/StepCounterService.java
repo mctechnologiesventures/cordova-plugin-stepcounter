@@ -197,6 +197,10 @@ public class StepCounterService extends Service implements StepChangeListener {
         ApplicationInfo appInfo = getApplicationInfo();
         String appName = pm.getApplicationLabel(appInfo).toString();
         int appIconRes = appInfo.icon;
+        // on Android 14 and higher we use the icon, else we get the white icon
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.TIRAMISU) {
+          appIconRes = getResources().getIdentifier("ic_launcher_foreground", "drawable", getPackageName());
+        }
         int baseFlags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
           baseFlags |= PendingIntent.FLAG_IMMUTABLE;
@@ -204,6 +208,7 @@ public class StepCounterService extends Service implements StepChangeListener {
         builder = new NotificationCompat.Builder(this, createChannel())
           .setSmallIcon(appIconRes)
           .setContentTitle(appName)   // shown if the system decides not to use your custom RemoteViews
+          .setContentText("")
           .setOngoing(true)
           .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
           .setPriority(NotificationCompat.PRIORITY_MAX)
@@ -228,7 +233,10 @@ public class StepCounterService extends Service implements StepChangeListener {
       views.setTextViewText(getResources().getIdentifier( "tvSteps",
         "id",
         getPackageName()), stepsText);
-      builder.setCustomContentView(views);
+      builder
+        .setCustomContentView(views)
+        .setCustomBigContentView(views)
+        .setStyle(new NotificationCompat.DecoratedCustomViewStyle());
 
       Notification notification = builder.build();
 
@@ -254,7 +262,10 @@ public class StepCounterService extends Service implements StepChangeListener {
       views.setTextViewText(getResources().getIdentifier( "tvSteps",
         "id",
         getPackageName()), stepsText);
-        builder.setCustomContentView(views);
+      builder
+        .setCustomContentView(views)
+        .setCustomBigContentView(views)
+        .setStyle(new NotificationCompat.DecoratedCustomViewStyle());
 
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if(manager != null)
