@@ -12,7 +12,7 @@
         android:ellipsize="end"
         android:maxLines="1"
         android:text="@string/mct_sc_notification_title"
-        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:textAppearance="?android:attr/textAppearanceSmall"
         android:textColor="@android:color/white"
         android:textStyle="bold" />
 
