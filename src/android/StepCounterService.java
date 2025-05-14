@@ -224,10 +224,6 @@ public class StepCounterService extends Service implements StepChangeListener {
         RemoteViews views = new RemoteViews(getPackageName(), getResources().getIdentifier( "sticky_notification",
                                                                                             "layout",
                                                                                             getPackageName()));
-        views.setTextViewText(getResources().getIdentifier( "tvTitle",
-          "id",
-          getPackageName()), appName);
-
       int id = getResources().getIdentifier("mct_sc_notification_steps", "string", getPackageName());
       String stepsText = String.format(getString(id), 0);
       views.setTextViewText(getResources().getIdentifier( "tvSteps",
@@ -247,16 +243,9 @@ public class StepCounterService extends Service implements StepChangeListener {
     @SuppressLint("DiscouragedApi")
     private void updateNotification(int steps){
         Log.d(TAG, "StepCounterService: Updating the notification ...");
-        PackageManager pm = getPackageManager();
-        ApplicationInfo appInfo = getApplicationInfo();
-        String appName = pm.getApplicationLabel(appInfo).toString();
         RemoteViews views = new RemoteViews(getPackageName(), getResources().getIdentifier( "sticky_notification",
                                                                                             "layout",
                                                                                             getPackageName()));
-        views.setTextViewText(getResources().getIdentifier( "tvTitle",
-          "id",
-          getPackageName()), appName);
-
       int id = getResources().getIdentifier("mct_sc_notification_steps", "string", getPackageName());
       String stepsText = String.format(getString(id), steps);
       views.setTextViewText(getResources().getIdentifier( "tvSteps",
