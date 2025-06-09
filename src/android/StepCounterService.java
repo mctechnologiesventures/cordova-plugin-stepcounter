@@ -199,7 +199,7 @@ public class StepCounterService extends Service implements StepChangeListener {
         int appIconRes = appInfo.icon;
         // on Android 14 and higher we use the icon, else we get the white icon
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.TIRAMISU) {
-          appIconRes = getResources().getIdentifier("ic_launcher_foreground", "drawable", getPackageName());
+          appIconRes = getResources().getIdentifier("ic_notification", "drawable", getPackageName());
         }
         int baseFlags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
