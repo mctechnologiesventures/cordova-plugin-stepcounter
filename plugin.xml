@@ -19,15 +19,31 @@
   <platform name="android">
 
     <config-file target="AndroidManifest.xml" parent="/manifest/application">
-        <service android:name="com.mctechnologies.cordovapluginstepcounter.StepCounterService" android:enabled="true" android:process=":cordovapluginstepcounter" android:foregroundServiceType="health"/>
+        <service android:name="com.mctechnologies.cordovapluginstepcounter.StepCounterService" 
+                 android:enabled="true" 
+                 android:process=":cordovapluginstepcounter" 
+                 android:foregroundServiceType="health|shortService"
+                 android:exported="false"/>
+
+        <!-- JobService for Android 15+ boot restart capability -->
+        <service android:name="com.mctechnologies.cordovapluginstepcounter.StepCounterJobService"
+                 android:permission="android.permission.BIND_JOB_SERVICE"
+                 android:enabled="true"
+                 android:exported="false"/>
 
         <!--
              * This class is triggered upon reboot of the device. It needs to re-register
              * the STEP_COUNTER with the StepCounterService
+             * Note: Android 15+ restricts BOOT_COMPLETED from starting health foreground services
+             * Uses JobScheduler as fallback for Android 15+
              -->
-        <receiver android:name="com.mctechnologies.cordovapluginstepcounter.StepCounterBootReceiver" android:exported="true" >
-            <intent-filter>
+        <receiver android:name="com.mctechnologies.cordovapluginstepcounter.StepCounterBootReceiver" 
+                  android:enabled="true"
+                  android:exported="true" >
+            <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
     </config-file>
@@ -51,6 +67,8 @@
     <source-file src="src/android/CordovaStepCounter.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
     <source-file src="src/android/StepCounterService.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
     <source-file src="src/android/StepCounterBootReceiver.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
+    <source-file src="src/android/StepCounterJobService.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
+    <source-file src="src/android/StepCounterNotificationHelper.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
     <source-file src="src/android/StepChangeListener.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
     <source-file src="src/android/StepCounterHelper.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
     <source-file src="src/android/StepCounterShutdownReceiver.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>

@@ -154,7 +154,11 @@ public class StepCounterService extends Service implements StepChangeListener {
 
             //Unregister shutdown/reboot broadcast receiver!
             if(stepCounterShutdownReceiver != null) {
-                unregisterReceiver(stepCounterShutdownReceiver);
+                try {
+                    unregisterReceiver(stepCounterShutdownReceiver);
+                } catch (IllegalArgumentException e) {
+                    Log.w(TAG, "StepCounterService: Receiver was not registered or already unregistered: " + e.getMessage());
+                }
                 stepCounterShutdownReceiver = null;
             }
         }

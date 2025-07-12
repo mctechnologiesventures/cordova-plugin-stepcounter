@@ -58,6 +58,9 @@ public class CordovaStepCounter extends CordovaPlugin {
 
         Activity activity = this.cordova.getActivity();
         Intent stepCounterIntent = new Intent(activity, StepCounterService.class);
+        
+        // Check for pending service start on Android 15+ (auto-start after app launch)
+        checkAndHandlePendingServiceStart(activity);
 
         if (ACTION_CAN_COUNT_STEPS.equals(action)) {
             Boolean can = deviceHasStepCounter(activity.getPackageManager());
@@ -72,11 +75,32 @@ public class CordovaStepCounter extends CordovaPlugin {
             }
 
             Log.i(TAG, "Starting StepCounterService ...");
+            
+            // Mark service as running for boot receiver
+            SharedPreferences prefs = activity.getSharedPreferences("StepCounterState", Context.MODE_PRIVATE);
+            prefs.edit().putBoolean("service_was_running", true).apply();
+            
+            // Schedule JobScheduler for Android 15+ boot restart capability
+            StepCounterJobService.scheduleBootRestartJob(activity);
+            
+            // Dismiss any restart notifications since we're manually starting
+            StepCounterNotificationHelper.dismissServiceRestartNotification(activity);
+            
             ContextCompat.startForegroundService(activity, stepCounterIntent);
             callbackContext.success("started service");
         }
         else if (ACTION_STOP.equals(action)) {
             Log.i(TAG, "Stopping StepCounterService");
+
+            // Mark service as stopped for boot receiver
+            SharedPreferences prefs = activity.getSharedPreferences("StepCounterState", Context.MODE_PRIVATE);
+            prefs.edit().putBoolean("service_was_running", false).apply();
+            
+            // Cancel JobScheduler since service is intentionally stopped
+            StepCounterJobService.cancelBootRestartJob(activity);
+            
+            // Dismiss any restart notifications
+            StepCounterNotificationHelper.dismissServiceRestartNotification(activity);
 
             //Stop the running step counter background service...
             activity.stopService(stepCounterIntent);
@@ -151,5 +175,31 @@ public class CordovaStepCounter extends CordovaPlugin {
         // StepCounter sensor and in the UI process. Because we have specified the service to run
         // in its own process in the AndroidManifest.xml.
         return context.getSharedPreferences(key, Context.MODE_PRIVATE | Context.MODE_MULTI_PROCESS);
+    }
+    
+    private void checkAndHandlePendingServiceStart(Activity activity) {
+        SharedPreferences prefs = activity.getSharedPreferences("StepCounterState", Context.MODE_PRIVATE);
+        
+        // Check if there was a boot restart attempt that may need user notification
+        if (prefs.getBoolean("boot_restart_attempted", false) && 
+            !prefs.getBoolean("service_restarted_after_boot", false)) {
+            
+            long bootTime = prefs.getLong("last_boot_time", 0);
+            long currentTime = System.currentTimeMillis();
+            
+            // If more than 2 minutes have passed since boot attempt, service likely failed to restart
+            if (currentTime - bootTime > 120000) {
+                Log.w(TAG, "Service may have failed to restart after boot - showing notification");
+                StepCounterNotificationHelper.showServiceRestartNotification(activity);
+                
+                // Clear the flag to avoid repeated notifications
+                prefs.edit().putBoolean("boot_restart_attempted", false).apply();
+            }
+        }
+        
+        // Clear any restart success flags when app is opened
+        if (prefs.getBoolean("service_restarted_after_boot", false)) {
+            prefs.edit().putBoolean("service_restarted_after_boot", false).apply();
+        }
     }
 }
