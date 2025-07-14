@@ -104,8 +104,6 @@ public class StepCounterJobService extends JobService {
         JobInfo.Builder builder = new JobInfo.Builder(BOOT_RESTART_JOB_ID, serviceComponent)
                 .setRequiredNetworkType(JobInfo.NETWORK_TYPE_NONE)
                 .setPersisted(true) // Survive reboots
-                .setMinimumLatency(BOOT_DELAY_MS) // Wait 30 seconds after boot
-                .setOverrideDeadline(BOOT_DELAY_MS + 10000) // Must run within 40 seconds
                 .setRequiresCharging(false)
                 .setRequiresDeviceIdle(false);
 
@@ -117,6 +115,10 @@ public class StepCounterJobService extends JobService {
         // Android 9.0+ specific settings  
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             builder.setImportantWhileForeground(true);
+        } else {
+            // Only set delays for pre-Android 9.0 devices
+            builder.setMinimumLatency(BOOT_DELAY_MS) // Wait 30 seconds after boot
+                   .setOverrideDeadline(BOOT_DELAY_MS + 10000); // Must run within 40 seconds
         }
 
         JobInfo jobInfo = builder.build();
