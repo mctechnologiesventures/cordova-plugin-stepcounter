@@ -58,8 +58,16 @@ public class StepCounterBootReceiver extends BroadcastReceiver {
         } catch (Exception e){
             Log.e(TAG, "StepCounterBootReceiver error: " + e.getMessage());
             
-            // Fallback: show notification for manual restart
-            StepCounterNotificationHelper.showServiceRestartNotification(context);
+            // Only show notification if service was actually running before
+            SharedPreferences prefs = context.getSharedPreferences("StepCounterState", Context.MODE_PRIVATE);
+            boolean wasRunning = prefs.getBoolean("service_was_running", false);
+            
+            if (wasRunning) {
+                // Fallback: show notification for manual restart
+                StepCounterNotificationHelper.showServiceRestartNotification(context);
+            } else {
+                Log.i(TAG, "Service wasn't running before, skipping restart notification");
+            }
         }
     }
 }

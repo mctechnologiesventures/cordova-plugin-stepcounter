@@ -181,8 +181,10 @@ public class CordovaStepCounter extends CordovaPlugin {
         SharedPreferences prefs = activity.getSharedPreferences("StepCounterState", Context.MODE_PRIVATE);
         
         // Check if there was a boot restart attempt that may need user notification
+        // Only show notification if service was actually running before boot
         if (prefs.getBoolean("boot_restart_attempted", false) && 
-            !prefs.getBoolean("service_restarted_after_boot", false)) {
+            !prefs.getBoolean("service_restarted_after_boot", false) &&
+            prefs.getBoolean("service_was_running", false)) {
             
             long bootTime = prefs.getLong("last_boot_time", 0);
             long currentTime = System.currentTimeMillis();
