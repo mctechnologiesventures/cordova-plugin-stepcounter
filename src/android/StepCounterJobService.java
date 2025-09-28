@@ -112,6 +112,10 @@ public class StepCounterJobService extends JobService {
             builder.setRequiresDeviceIdle(false);
         }
 
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.P) {
+            builder.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY);
+        }
+
         // Android 9.0+ specific settings  
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             builder.setImportantWhileForeground(true);
