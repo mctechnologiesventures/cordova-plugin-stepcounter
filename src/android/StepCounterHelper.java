@@ -182,7 +182,7 @@ class StepCounterHelper {
 
         SharedPreferences.Editor sharedPrefEditor = sharedPref.edit();
         sharedPrefEditor.putInt("PEDOMETER_TOTAL_COUNT_PREF", newValue);
-        sharedPrefEditor.apply();
+        sharedPrefEditor.commit(); // Use commit() for multi-process synchronization
     }
 
     static void saveDailyBuffer(@NonNull Context context) {
@@ -211,7 +211,7 @@ class StepCounterHelper {
                         data.put(currentDateString, dayData);
 
                         editor.putString(PREF_KEY_PEDOMETER_DATA, data.toString());
-                        editor.apply();
+                        editor.commit(); // Use commit() for multi-process synchronization
                     }
                 }
             }
@@ -230,7 +230,7 @@ class StepCounterHelper {
                         data.put(currentDateString, historyData);
 
                         editor.putString(PREF_KEY_PEDOMETER_HISTORY_DATA, data.toString());
-                        editor.apply();
+                        editor.commit(); // Use commit() for multi-process synchronization
                     }
                 }
             }
