@@ -294,7 +294,9 @@ public class StepCounterService extends Service implements StepChangeListener {
     @Override
     public void onChanged(float steps) {
         //Step history changed, let's save it...
-        updateNotification(StepCounterHelper.saveSteps(steps, this));
+        int savedSteps = StepCounterHelper.saveSteps(steps, this);
+        Log.i(TAG, "NOTIFICATION UPDATE: Sensor=" + steps + " SavedSteps=" + savedSteps);
+        updateNotification(savedSteps);
     }
 
     //endregion

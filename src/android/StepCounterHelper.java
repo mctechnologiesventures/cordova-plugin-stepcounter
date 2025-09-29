@@ -42,9 +42,9 @@ class StepCounterHelper {
     }
 
     static int cacheSteps(int steps, String format, String key, @NonNull Context context) {
+      int oldSteps = 0;
       try {
           int newSteps;
-          int oldSteps = 0;
           int offset;
           int buffer = 0;
 
@@ -54,8 +54,6 @@ class StepCounterHelper {
           String currentDateString = dateFormatter.format(currentDate);
           SharedPreferences sharedPref = CordovaStepCounter.getDefaultSharedPreferencesMultiProcess(context,
                                                                                                   PREFERENCE_NAME);
-
-          SharedPreferences.Editor editor = sharedPref.edit();
 
           JSONObject pData = new JSONObject();
           JSONObject newData = new JSONObject();
@@ -101,8 +99,10 @@ class StepCounterHelper {
           //Calculate the new steps ....
           newSteps = steps - offset + buffer;
 
-          if(newSteps < 0)
-              return oldSteps; //Something went wrong, don't save false values!
+          if(newSteps < 0) {
+              Log.w("StepCounterHelper", "Calculated negative steps (" + newSteps + "), keeping old value: " + oldSteps);
+              return oldSteps; // Return old value but don't save anything
+          }
 
           //Calculate the total steps...
           int stepsCounted = getTotalCount(context);
@@ -115,16 +115,24 @@ class StepCounterHelper {
           newData.put(PEDOMETER_DATA_DAILY_BUFFER, buffer);
           pData.put(currentDateString, newData);
 
+          // Only proceed if SharedPreferences save is successful
+          SharedPreferences.Editor editor = sharedPref.edit();
           editor.putString(key, pData.toString());
-          editor.apply();
+          boolean saveSuccess = editor.commit(); // Use commit() for multi-process synchronization
 
-          return newSteps;
-      }
-      catch (Exception ex) {
-          ex.printStackTrace();
-      }
+          if (!saveSuccess) {
+              Log.e("StepCounterHelper", "Failed to save step data to SharedPreferences");
+              return oldSteps; // Return old persisted value if save failed
+          }
 
-      return 0;
+          Log.d("StepCounterHelper", "Successfully saved steps: " + newSteps + " for date: " + currentDateString);
+          return newSteps; // Only return new value if successfully saved
+
+      } catch (Exception ex) {
+          Log.e("StepCounterHelper", "Exception in cacheSteps: " + ex.getMessage(), ex);
+          // Return the old persisted value if any error occurs
+          return oldSteps;
+      }
     }
 
     static int saveSteps(float sensorValue, @NonNull Context context) {
