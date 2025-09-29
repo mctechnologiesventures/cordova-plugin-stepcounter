@@ -3,6 +3,7 @@ package com.mctechnologies.cordovapluginstepcounter;
 import android.content.Context;
 import android.content.SharedPreferences;
 import androidx.annotation.NonNull;
+import android.util.Log;
 
 import org.json.JSONObject;
 
