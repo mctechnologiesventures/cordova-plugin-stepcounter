@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import androidx.annotation.NonNull;
 import android.util.Log;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
@@ -24,9 +25,11 @@ class StepCounterHelper {
     private static final String PREFERENCE_NAME = "UserData";
     private static final String PREF_KEY_PEDOMETER_DATA = "pedometerDayData";
     private static final String PREF_KEY_PEDOMETER_HISTORY_DATA = "pedometerHistoryData";
+    private static final String PREF_KEY_DEBUG_LOGS = "pedometerDebugLogs";
     private static final String PEDOMETER_DATA_STEPS = "steps";
     private static final String PEDOMETER_DATA_OFFSET = "offset";
     private static final String PEDOMETER_DATA_DAILY_BUFFER = "buffer";
+    private static final int MAX_LOG_ENTRIES = 500; // Keep last 500 log entries
 
     //endregion
 
@@ -76,10 +79,14 @@ class StepCounterHelper {
               int delta = (steps - offset + buffer) - oldSteps;
               if(delta < 0) {
                   //We didn't save day's buffer properly!
+                  Log.w("StepCounterHelper", "STEP_ANOMALY: Negative delta detected. sensor=" + steps +
+                        " offset=" + offset + " buffer=" + buffer + " oldSteps=" + oldSteps +
+                        " delta=" + delta + " date=" + currentDateString);
                   buffer += (Math.abs(delta) + 1);
               }
 
           } else {
+              // New day/hour started
               Calendar calendar = getPreviousDate(key);
               String previousDateString = dateFormatter.format(calendar.getTime());
 
@@ -91,24 +98,39 @@ class StepCounterHelper {
 
                   if (previousData.has(PEDOMETER_DATA_DAILY_BUFFER))
                       buffer = previousData.getInt(PEDOMETER_DATA_DAILY_BUFFER);
+
+                  Log.d("StepCounterHelper", "NEW_PERIOD: Starting new period. sensor=" + steps +
+                        " inheritedOffset=" + offset + " inheritedBuffer=" + buffer +
+                        " prev=" + previousDateString + " current=" + currentDateString);
               }
-              else
+              else {
                   //Change offset for current count...
                   offset = steps - oldSteps;
+                  Log.d("StepCounterHelper", "FIRST_RUN: No previous data. sensor=" + steps +
+                        " calculatedOffset=" + offset);
+              }
           }
 
           //Calculate the new steps ....
           newSteps = steps - offset + buffer;
 
           if(newSteps < 0) {
-              Log.w("StepCounterHelper", "Calculated negative steps (" + newSteps + "), keeping old value: " + oldSteps);
+              Log.e("StepCounterHelper", "STEP_NEGATIVE: Calculated negative steps. sensor=" + steps +
+                    " offset=" + offset + " buffer=" + buffer + " result=" + newSteps +
+                    " returning=" + oldSteps + " date=" + currentDateString);
               return oldSteps; // Return old value but don't save anything
           }
 
           //Calculate the total steps...
           int stepsCounted = getTotalCount(context);
-          stepsCounted += (newSteps - oldSteps);
-          setTotalCount(context, stepsCounted);
+          int stepDelta = newSteps - oldSteps;
+          stepsCounted += stepDelta;
+
+          boolean totalSaveSuccess = setTotalCount(context, stepsCounted);
+          if (!totalSaveSuccess) {
+              Log.e("StepCounterHelper", "SAVE_FAILED: Failed to save total count. total=" + stepsCounted +
+                    " delta=" + stepDelta + " sensor=" + steps);
+          }
 
           //Save calculated values to SharedPreferences
           newData.put(PEDOMETER_DATA_STEPS, newSteps);
@@ -122,11 +144,14 @@ class StepCounterHelper {
           boolean saveSuccess = editor.commit(); // Use commit() for multi-process synchronization
 
           if (!saveSuccess) {
-              Log.e("StepCounterHelper", "Failed to save step data to SharedPreferences");
+              Log.e("StepCounterHelper", "SAVE_FAILED: Failed to save step data. sensor=" + steps +
+                    " newSteps=" + newSteps + " offset=" + offset + " buffer=" + buffer +
+                    " date=" + currentDateString);
               return oldSteps; // Return old persisted value if save failed
           }
 
-          Log.d("StepCounterHelper", "Successfully saved steps: " + newSteps + " for date: " + currentDateString);
+          Log.d("StepCounterHelper", "STEP_SAVED: sensor=" + steps + " daily=" + newSteps +
+                " total=" + stepsCounted + " delta=" + stepDelta + " date=" + currentDateString);
           return newSteps; // Only return new value if successfully saved
 
       } catch (Exception ex) {
@@ -185,13 +210,13 @@ class StepCounterHelper {
         return totalCount;
     }
 
-    private static void setTotalCount(@NonNull Context context, Integer newValue){
+    private static boolean setTotalCount(@NonNull Context context, Integer newValue){
         SharedPreferences sharedPref = CordovaStepCounter.getDefaultSharedPreferencesMultiProcess(context,
                                                                                                 PREFERENCE_NAME);
 
         SharedPreferences.Editor sharedPrefEditor = sharedPref.edit();
         sharedPrefEditor.putInt("PEDOMETER_TOTAL_COUNT_PREF", newValue);
-        sharedPrefEditor.commit(); // Use commit() for multi-process synchronization
+        return sharedPrefEditor.commit(); // Use commit() for multi-process synchronization
     }
 
     static void saveDailyBuffer(@NonNull Context context) {
@@ -220,7 +245,14 @@ class StepCounterHelper {
                         data.put(currentDateString, dayData);
 
                         editor.putString(PREF_KEY_PEDOMETER_DATA, data.toString());
-                        editor.commit(); // Use commit() for multi-process synchronization
+                        boolean dayBufferSaved = editor.commit(); // Use commit() for multi-process synchronization
+                        if (!dayBufferSaved) {
+                            Log.e("StepCounterHelper", "BUFFER_SAVE_FAILED: Failed to save daily buffer. steps=" +
+                                  steps + " date=" + currentDateString);
+                        } else {
+                            Log.i("StepCounterHelper", "BUFFER_SAVED: Daily buffer saved. steps=" + steps +
+                                  " date=" + currentDateString);
+                        }
                     }
                 }
             }
@@ -239,13 +271,104 @@ class StepCounterHelper {
                         data.put(currentDateString, historyData);
 
                         editor.putString(PREF_KEY_PEDOMETER_HISTORY_DATA, data.toString());
-                        editor.commit(); // Use commit() for multi-process synchronization
+                        boolean historyBufferSaved = editor.commit(); // Use commit() for multi-process synchronization
+                        if (!historyBufferSaved) {
+                            Log.e("StepCounterHelper", "BUFFER_SAVE_FAILED: Failed to save history buffer. steps=" +
+                                  steps + " date=" + currentDateString);
+                        }
                     }
                 }
             }
         }
         catch (Exception ex) {
             ex.printStackTrace();
+        }
+    }
+
+    /**
+     * Logs a message to SharedPreferences for persistent debugging
+     * @param context Application context
+     * @param level Log level (INFO, ERROR, WARN, DEBUG)
+     * @param tag Tag/component name
+     * @param message Log message
+     */
+    static void logToPrefs(@NonNull Context context, String level, String tag, String message) {
+        try {
+            SharedPreferences sharedPref = CordovaStepCounter.getDefaultSharedPreferencesMultiProcess(context, PREFERENCE_NAME);
+
+            // Get existing logs
+            JSONArray logs;
+            if (sharedPref.contains(PREF_KEY_DEBUG_LOGS)) {
+                String logsString = sharedPref.getString(PREF_KEY_DEBUG_LOGS, "[]");
+                logs = new JSONArray(logsString);
+            } else {
+                logs = new JSONArray();
+            }
+
+            // Create new log entry
+            JSONObject logEntry = new JSONObject();
+            SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault());
+            logEntry.put("timestamp", dateFormatter.format(new Date()));
+            logEntry.put("level", level);
+            logEntry.put("tag", tag);
+            logEntry.put("message", message);
+
+            // Add to logs array
+            logs.put(logEntry);
+
+            // Keep only last MAX_LOG_ENTRIES
+            if (logs.length() > MAX_LOG_ENTRIES) {
+                JSONArray trimmedLogs = new JSONArray();
+                int startIndex = logs.length() - MAX_LOG_ENTRIES;
+                for (int i = startIndex; i < logs.length(); i++) {
+                    trimmedLogs.put(logs.get(i));
+                }
+                logs = trimmedLogs;
+            }
+
+            // Save back to SharedPreferences
+            SharedPreferences.Editor editor = sharedPref.edit();
+            editor.putString(PREF_KEY_DEBUG_LOGS, logs.toString());
+            editor.commit();
+
+            // Also log to Android logcat
+            Log.d(tag, "[" + level + "] " + message);
+
+        } catch (Exception ex) {
+            Log.e("StepCounterHelper", "Failed to write to persistent log: " + ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * Retrieves all logs from SharedPreferences
+     * @param context Application context
+     * @return JSON string of all logs
+     */
+    static String getLogs(@NonNull Context context) {
+        try {
+            SharedPreferences sharedPref = CordovaStepCounter.getDefaultSharedPreferencesMultiProcess(context, PREFERENCE_NAME);
+            if (sharedPref.contains(PREF_KEY_DEBUG_LOGS)) {
+                return sharedPref.getString(PREF_KEY_DEBUG_LOGS, "[]");
+            }
+        } catch (Exception ex) {
+            Log.e("StepCounterHelper", "Failed to read persistent logs: " + ex.getMessage(), ex);
+        }
+        return "[]";
+    }
+
+    /**
+     * Clears all logs from SharedPreferences
+     * @param context Application context
+     */
+    static void clearLogs(@NonNull Context context) {
+        try {
+            SharedPreferences sharedPref = CordovaStepCounter.getDefaultSharedPreferencesMultiProcess(context, PREFERENCE_NAME);
+            SharedPreferences.Editor editor = sharedPref.edit();
+            editor.remove(PREF_KEY_DEBUG_LOGS);
+            editor.commit();
+            Log.d("StepCounterHelper", "Persistent logs cleared");
+        } catch (Exception ex) {
+            Log.e("StepCounterHelper", "Failed to clear persistent logs: " + ex.getMessage(), ex);
         }
     }
 

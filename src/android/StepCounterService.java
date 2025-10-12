@@ -68,6 +68,7 @@ public class StepCounterService extends Service implements StepChangeListener {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.i(TAG, "StepCounterService: onStartCommand is called!");
+        StepCounterHelper.logToPrefs(this, "INFO", TAG, "onStartCommand called, flags=" + flags + " startId=" + startId);
         return Service.START_STICKY;
     }
 
@@ -75,11 +76,13 @@ public class StepCounterService extends Service implements StepChangeListener {
     public void onCreate() {
         super.onCreate();
         Log.i(TAG, "StepCounterService: onCreate() is called!");
+        StepCounterHelper.logToPrefs(this, "INFO", TAG, "onCreate called, isRunning=" + isRunning);
 
         if (isRunning /* || has no step sensors */)
             return;
 
         Log.i(TAG, "StepCounterService: Relaunch service in 1 hour (4.4.2 start_sticky bug ) ...");
+        StepCounterHelper.logToPrefs(this, "INFO", TAG, "Scheduling service relaunch in 1 hour");
 
         Intent newServiceIntent = new Intent(this,StepCounterService.class);
         AlarmManager manager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
@@ -109,12 +112,14 @@ public class StepCounterService extends Service implements StepChangeListener {
                 return;
 
             Log.i(TAG, "StepCounterService: Registering STEP_DETECTOR sensor...");
+            StepCounterHelper.logToPrefs(this, "INFO", TAG, "doInit: Registering step sensor");
 
             stepSensorManager = new StepSensorManager();
             stepSensorManager.start(this, this, SensorManager.SENSOR_DELAY_NORMAL);
 
             //Start foreground service with an sticky notification...
             startForegroundService();
+            StepCounterHelper.logToPrefs(this, "INFO", TAG, "doInit: Foreground service started");
 
             //This is broadcast when the device is being shut down (completely turned off, not sleeping).
             //Once the broadcast is complete, the final shutdown will proceed and all unsaved data lost.
@@ -125,10 +130,12 @@ public class StepCounterService extends Service implements StepChangeListener {
 
                 registerReceiver(   stepCounterShutdownReceiver,
                                     new IntentFilter(Intent.ACTION_SHUTDOWN));
+                StepCounterHelper.logToPrefs(this, "INFO", TAG, "doInit: Shutdown receiver registered");
             }
         }
         catch (Exception ex) {
             Log.w(TAG, "StepCounterService: Initialization failed. " + ex.getMessage());
+            StepCounterHelper.logToPrefs(this, "ERROR", TAG, "doInit failed: " + ex.getMessage());
         }
     }
 
@@ -146,6 +153,7 @@ public class StepCounterService extends Service implements StepChangeListener {
     @Override
     public boolean stopService(Intent intent) {
         Log.i(TAG, "StepCounterService: Received stop service: " + intent);
+        StepCounterHelper.logToPrefs(this, "INFO", TAG, "stopService called");
 
         if(isRunning) {
             //Stop listening to events when stop() is called
@@ -156,8 +164,10 @@ public class StepCounterService extends Service implements StepChangeListener {
             if(stepCounterShutdownReceiver != null) {
                 try {
                     unregisterReceiver(stepCounterShutdownReceiver);
+                    StepCounterHelper.logToPrefs(this, "INFO", TAG, "stopService: Shutdown receiver unregistered");
                 } catch (IllegalArgumentException e) {
                     Log.w(TAG, "StepCounterService: Receiver was not registered or already unregistered: " + e.getMessage());
+                    StepCounterHelper.logToPrefs(this, "WARN", TAG, "stopService: Receiver unregister failed: " + e.getMessage());
                 }
                 stepCounterShutdownReceiver = null;
             }
@@ -166,6 +176,7 @@ public class StepCounterService extends Service implements StepChangeListener {
         isRunning = false;
 
         Log.i(TAG, "StepCounterService: Relaunch service in 10000ms ..." );
+        StepCounterHelper.logToPrefs(this, "INFO", TAG, "stopService: Scheduling relaunch in 10s");
 
         //Auto-Relaunch the service....
         Intent newServiceIntent = new Intent(this,StepCounterService.class);
@@ -295,7 +306,8 @@ public class StepCounterService extends Service implements StepChangeListener {
     public void onChanged(float steps) {
         //Step history changed, let's save it...
         int savedSteps = StepCounterHelper.saveSteps(steps, this);
-        Log.i(TAG, "NOTIFICATION UPDATE: Sensor=" + steps + " SavedSteps=" + savedSteps);
+        Log.i(TAG, "STEP_UPDATE: Sensor=" + steps + " Daily=" + savedSteps);
+        StepCounterHelper.logToPrefs(this, "INFO", TAG, "onChanged: Sensor=" + steps + " Daily=" + savedSteps);
         updateNotification(savedSteps);
     }
 

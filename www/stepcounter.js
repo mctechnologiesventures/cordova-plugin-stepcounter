@@ -96,4 +96,27 @@ module.exports = {
       []
     );
   },
+
+  getLogs: function (successCallback, errorCallback) {
+    cordova.exec(
+      function (result) {
+        var parsedResult = JSON.parse(result);
+        successCallback(parsedResult);
+      },
+      errorCallback,
+      "CordovaStepCounter",
+      "get_logs",
+      []
+    );
+  },
+
+  clearLogs: function (successCallback, errorCallback) {
+    cordova.exec(
+      successCallback,
+      errorCallback,
+      "CordovaStepCounter",
+      "clear_logs",
+      []
+    );
+  },
 };

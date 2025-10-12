@@ -50,55 +50,62 @@ public class CordovaStepCounter extends CordovaPlugin {
     private final String ACTION_GET_TODAY_STEPS  = "get_today_step_count";
     private final String ACTION_CAN_COUNT_STEPS  = "can_count_steps";
     private final String ACTION_GET_HISTORY      = "get_history";
+    private final String ACTION_GET_LOGS         = "get_logs";
+    private final String ACTION_CLEAR_LOGS       = "clear_logs";
 
 
     @Override
     public boolean execute(String action, JSONArray data, CallbackContext callbackContext)  {
         LOG.i(TAG, "execute()");
+        StepCounterHelper.logToPrefs(this.cordova.getActivity(), "INFO", TAG, "execute() action=" + action);
 
         Activity activity = this.cordova.getActivity();
         Intent stepCounterIntent = new Intent(activity, StepCounterService.class);
-        
+
         // Check for pending service start on Android 15+ (auto-start after app launch)
         checkAndHandlePendingServiceStart(activity);
 
         if (ACTION_CAN_COUNT_STEPS.equals(action)) {
             Boolean can = deviceHasStepCounter(activity.getPackageManager());
             Log.i(TAG, "Checking if device has step counter APIS: "+ can);
+            StepCounterHelper.logToPrefs(activity, "INFO", TAG, "Device has step counter: " + can);
             callbackContext.success( can ? 1 : 0 );
         }
         else if (ACTION_START.equals(action)) {
             if(!deviceHasStepCounter(activity.getPackageManager())){
                 Log.i(TAG, "Step detector not supported");
+                StepCounterHelper.logToPrefs(activity, "ERROR", TAG, "Step detector not supported");
                 callbackContext.error("Step detector not supported");
                 return true;
             }
 
             Log.i(TAG, "Starting StepCounterService ...");
-            
+            StepCounterHelper.logToPrefs(activity, "INFO", TAG, "Starting StepCounterService");
+
             // Mark service as running for boot receiver
             SharedPreferences prefs = activity.getSharedPreferences("StepCounterState", Context.MODE_PRIVATE);
             prefs.edit().putBoolean("service_was_running", true).apply();
-            
+
             // Schedule JobScheduler for Android 15+ boot restart capability
             StepCounterJobService.scheduleBootRestartJob(activity);
-            
+
             // Dismiss any restart notifications since we're manually starting
             StepCounterNotificationHelper.dismissServiceRestartNotification(activity);
-            
+
             ContextCompat.startForegroundService(activity, stepCounterIntent);
             callbackContext.success("started service");
         }
         else if (ACTION_STOP.equals(action)) {
             Log.i(TAG, "Stopping StepCounterService");
+            StepCounterHelper.logToPrefs(activity, "INFO", TAG, "Stopping StepCounterService");
 
             // Mark service as stopped for boot receiver
             SharedPreferences prefs = activity.getSharedPreferences("StepCounterState", Context.MODE_PRIVATE);
             prefs.edit().putBoolean("service_was_running", false).apply();
-            
+
             // Cancel JobScheduler since service is intentionally stopped
             StepCounterJobService.cancelBootRestartJob(activity);
-            
+
             // Dismiss any restart notifications
             StepCounterNotificationHelper.dismissServiceRestartNotification(activity);
 
@@ -108,7 +115,8 @@ public class CordovaStepCounter extends CordovaPlugin {
         }
         else if (ACTION_GET_STEPS.equals(action)) {
             Integer steps = StepCounterHelper.getTotalCount(activity);
-            Log.i(TAG, "Fetching steps counted from stepCounterService: " + steps);
+            Log.i(TAG, "QUERY_TOTAL: Returning total steps: " + steps);
+            StepCounterHelper.logToPrefs(activity, "INFO", TAG, "QUERY_TOTAL: " + steps);
             callbackContext.success(steps);
         }
         else if (ACTION_GET_TODAY_STEPS.equals(action)) {
@@ -127,7 +135,8 @@ public class CordovaStepCounter extends CordovaPlugin {
                     pData = new JSONObject(pDataString);
                     Log.d(TAG," got json shared prefs "+pData.toString());
                 }catch (JSONException err){
-                    Log.d(TAG," Exception while parsing json string : "+pDataString);
+                    Log.e(TAG," DATA_PARSE_ERROR: Exception while parsing json string : "+pDataString);
+                    StepCounterHelper.logToPrefs(activity, "ERROR", TAG, "DATA_PARSE_ERROR: " + err.getMessage());
                 }
 
                 if(pData.has(currentDateString)){
@@ -135,14 +144,17 @@ public class CordovaStepCounter extends CordovaPlugin {
                         dayData = pData.getJSONObject(currentDateString);
                         daySteps = dayData.getInt("steps");
                     }catch(JSONException err){
-                        Log.e(TAG,"Exception while getting Object from JSON for "+currentDateString);
+                        Log.e(TAG,"DATA_PARSE_ERROR: Exception while getting Object from JSON for "+currentDateString);
+                        StepCounterHelper.logToPrefs(activity, "ERROR", TAG, "DATA_PARSE_ERROR for date " + currentDateString + ": " + err.getMessage());
                     }
                 }
 
-                Log.i(TAG, "Getting steps for today: " + daySteps);
+                Log.i(TAG, "QUERY_TODAY: Returning steps for today: " + daySteps + " date=" + currentDateString);
+                StepCounterHelper.logToPrefs(activity, "INFO", TAG, "QUERY_TODAY: " + daySteps + " date=" + currentDateString);
                 callbackContext.success(daySteps);
             }else{
-                Log.i(TAG, "No steps history found in stepCounterService !");
+                Log.w(TAG, "QUERY_TODAY: No steps history found in stepCounterService!");
+                StepCounterHelper.logToPrefs(activity, "WARN", TAG, "QUERY_TODAY: No steps history found");
                 callbackContext.success(-1);
             }
         } else if(ACTION_GET_HISTORY.equals(action)){
@@ -150,14 +162,39 @@ public class CordovaStepCounter extends CordovaPlugin {
             if(sharedPref.contains("pedometerHistoryData")){
                 String pDataString = sharedPref.getString("pedometerHistoryData","{}");
                 Log.i(TAG, "Getting steps history from stepCounterService: " + pDataString);
+                StepCounterHelper.logToPrefs(activity, "INFO", TAG, "GET_HISTORY: Retrieved history data");
                 callbackContext.success(pDataString);
             }else{
                 Log.i(TAG, "No steps history found in stepCounterService !");
+                StepCounterHelper.logToPrefs(activity, "INFO", TAG, "GET_HISTORY: No history found");
                 callbackContext.success("{}");
+            }
+        }
+        else if (ACTION_GET_LOGS.equals(action)) {
+            try {
+                String logs = StepCounterHelper.getLogs(activity);
+                Log.i(TAG, "Getting persistent logs, size=" + logs.length());
+                callbackContext.success(logs);
+            } catch (Exception e) {
+                Log.e(TAG, "Error getting logs: " + e.getMessage());
+                StepCounterHelper.logToPrefs(activity, "ERROR", TAG, "Error getting logs: " + e.getMessage());
+                callbackContext.error("Error getting logs: " + e.getMessage());
+            }
+        }
+        else if (ACTION_CLEAR_LOGS.equals(action)) {
+            try {
+                StepCounterHelper.clearLogs(activity);
+                Log.i(TAG, "Persistent logs cleared");
+                callbackContext.success("Logs cleared successfully");
+            } catch (Exception e) {
+                Log.e(TAG, "Error clearing logs: " + e.getMessage());
+                StepCounterHelper.logToPrefs(activity, "ERROR", TAG, "Error clearing logs: " + e.getMessage());
+                callbackContext.error("Error clearing logs: " + e.getMessage());
             }
         }
         else {
             Log.e(TAG, "Invalid action called on class " + TAG + ", " + action);
+            StepCounterHelper.logToPrefs(activity, "ERROR", TAG, "Invalid action: " + action);
             callbackContext.error("Invalid action called on class " + TAG + ", " + action);
         }
 
@@ -179,26 +216,27 @@ public class CordovaStepCounter extends CordovaPlugin {
     
     private void checkAndHandlePendingServiceStart(Activity activity) {
         SharedPreferences prefs = activity.getSharedPreferences("StepCounterState", Context.MODE_PRIVATE);
-        
+
         // Check if there was a boot restart attempt that may need user notification
         // Only show notification if service was actually running before boot
-        if (prefs.getBoolean("boot_restart_attempted", false) && 
+        if (prefs.getBoolean("boot_restart_attempted", false) &&
             !prefs.getBoolean("service_restarted_after_boot", false) &&
             prefs.getBoolean("service_was_running", false)) {
-            
+
             long bootTime = prefs.getLong("last_boot_time", 0);
             long currentTime = System.currentTimeMillis();
-            
+
             // If more than 2 minutes have passed since boot attempt, service likely failed to restart
             if (currentTime - bootTime > 120000) {
                 Log.w(TAG, "Service may have failed to restart after boot - showing notification");
+                StepCounterHelper.logToPrefs(activity, "WARN", TAG, "Service failed to restart after boot - showing notification");
                 StepCounterNotificationHelper.showServiceRestartNotification(activity);
-                
+
                 // Clear the flag to avoid repeated notifications
                 prefs.edit().putBoolean("boot_restart_attempted", false).apply();
             }
         }
-        
+
         // Clear any restart success flags when app is opened
         if (prefs.getBoolean("service_restarted_after_boot", false)) {
             prefs.edit().putBoolean("service_restarted_after_boot", false).apply();
