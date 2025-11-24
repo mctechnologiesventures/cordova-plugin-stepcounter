@@ -62,6 +62,9 @@ public class CordovaStepCounter extends CordovaPlugin {
         Activity activity = this.cordova.getActivity();
         Intent stepCounterIntent = new Intent(activity, StepCounterService.class);
 
+        // Migration: Remove old debug logs from UserData SharedPreferences (one-time cleanup)
+        StepCounterHelper.migrateOldLogsFromUserData(activity);
+
         // Check for pending service start on Android 15+ (auto-start after app launch)
         checkAndHandlePendingServiceStart(activity);
 

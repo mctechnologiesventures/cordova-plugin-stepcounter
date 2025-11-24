@@ -389,5 +389,44 @@ class StepCounterHelper {
         }
     }
 
+    /**
+     * Migration method: Removes old debug logs from UserData SharedPreferences.
+     * This ensures logs that were stored in UserData before the separation are cleaned up.
+     * Only runs once per installation.
+     * @param context Application context
+     */
+    static void migrateOldLogsFromUserData(@NonNull Context context) {
+        try {
+            // Check if migration has already been completed
+            SharedPreferences userDataPrefs = CordovaStepCounter.getDefaultSharedPreferencesMultiProcess(context, PREFERENCE_NAME);
+
+            if (userDataPrefs.getBoolean("logs_migration_completed", false)) {
+                // Migration already done, skip
+                return;
+            }
+
+            // Check and remove old logs from UserData file (before the separation)
+            if (userDataPrefs.contains(PREF_KEY_DEBUG_LOGS)) {
+                SharedPreferences.Editor editor = userDataPrefs.edit();
+                editor.remove(PREF_KEY_DEBUG_LOGS);
+                editor.putBoolean("logs_migration_completed", true);
+                boolean success = editor.commit();
+
+                if (success) {
+                    Log.i("StepCounterHelper", "Migration: Removed old debug logs from UserData SharedPreferences");
+                } else {
+                    Log.w("StepCounterHelper", "Migration: Failed to remove old debug logs from UserData");
+                }
+            } else {
+                // No old logs found, just mark migration as completed
+                SharedPreferences.Editor editor = userDataPrefs.edit();
+                editor.putBoolean("logs_migration_completed", true);
+                editor.commit();
+            }
+        } catch (Exception ex) {
+            Log.e("StepCounterHelper", "Migration: Error removing old logs from UserData: " + ex.getMessage(), ex);
+        }
+    }
+
     //endregion
 }
