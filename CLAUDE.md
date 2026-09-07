@@ -34,21 +34,21 @@ cordova plugin add https://github.com/DigitalsunrayMedia/cordova-plugin-stepcoun
 ### Core Components
 
 **JavaScript Interface (`www/stepcounter.js`)**
-- Exports stepcounter module with methods: start(), stop(), getTodayStepCount(), getStepCount(), deviceCanCountSteps(), getHistory()
+- Exports stepcounter module with methods: start(), stop(), getTodayStepCount(), getStepCount(), deviceCanCountSteps(), getHistory(), getLogs(), clearLogs(), isServiceRunning(), isIgnoringBatteryOptimizations(), requestIgnoreBatteryOptimizations(), getOemGuide(), openOemSettings(), getStorageInfo(), storageTest()
 - All methods use cordova.exec() to communicate with native Android code
 - Handles JSON parsing for history data
 
 **Main Plugin Class (`src/android/CordovaStepCounter.java`)**
 - Entry point for all JavaScript calls via execute() method
 - Manages StepCounterService lifecycle (start/stop foreground service)
-- Handles data retrieval from SharedPreferences for step counts and history
+- Handles data retrieval from StepStore (SQLite) for step counts and history
 - Validates device compatibility (Android 4.4+ with step counter sensor)
 
 **Background Service (`src/android/StepCounterService.java`)**
 - Foreground service that runs continuously to track steps
 - Implements StepChangeListener interface for step updates
 - Shows persistent notification with current step count
-- Manages step data persistence in SharedPreferences
+- Persists step data through StepCounterHelper -> StepStore (SQLite)
 - Auto-restarts after system kills to maintain step tracking
 
 **Step Sensor Management (`src/android/StepSensorManager.java`)**
@@ -61,16 +61,29 @@ cordova plugin add https://github.com/DigitalsunrayMedia/cordova-plugin-stepcoun
 - Ensures continuous step tracking across device restarts
 
 **Helper Classes**
-- `StepCounterHelper.java`: Utility methods for step counting operations
+- `StepCounterHelper.java`: Thin facade over `StepStore` for the service, receivers and plugin entry point
 - `StepChangeListener.java`: Interface for step count change notifications
 - `StepCounterShutdownReceiver.java`: Handles service shutdown events
 
 ### Data Storage
 
-The plugin uses SharedPreferences with multi-process access:
-- `pedometerDayData`: Current day's step data
-- `pedometerHistoryData`: Historical step data in JSON format
-- Data structure: `{"YYYY-MM-DD": {"offset": XXX, "steps": YYY}}`
+SQLite (`src/android/StepStore.java`, database `stepcounter.db`, WAL), shared by the UI process and
+the service process:
+- `period(kind, key, steps, step_offset, buffer, updated_at)` with `kind` = `day` (`yyyy-MM-dd`) or
+  `hour` (`yyyy-MM-dd HH`); one transaction per sensor event updates both rows and the total
+- `meta(key, value)`: `total_count`, `service_heartbeat_at`, `last_sensor_at`, `legacy_*` migration markers
+- `log(id, at, level, tag, msg)`: persistent debug log (capped at 500 rows)
+- `getHistory()` returns the hour rows as `{"yyyy-MM-dd HH": {"steps", "offset", "buffer"}}`
+
+`src/android/StepStoreMigration.java` copies the pre-0.2.0 SharedPreferences store (`UserData`,
+keys `pedometerDayData` / `pedometerHistoryData`) into SQLite on first open: insert-or-ignore so DB
+rows always win, a legacy file that reads back empty is retried instead of treated as empty, and
+the file is deleted 30 days after a successful migration. Never write to `UserData` again: a
+commit from the UI process rewrites the whole file from that process's in-memory map, and an empty
+read followed by a commit is what wiped devices.
+
+`src/android/StepStoreTestHooks.java` implements the `storage_test` action (see TESTING.md);
+`src/android/OemBackgroundGuide.java` resolves and opens vendor autostart/battery screens.
 
 ### Permissions and Features
 
@@ -78,6 +91,7 @@ Required Android permissions:
 - `RECEIVE_BOOT_COMPLETED`: Auto-start after reboot
 - `FOREGROUND_SERVICE`: Run background service
 - `FOREGROUND_SERVICE_HEALTH`: Health-related foreground service
+- `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`: Battery optimization exemption prompt
 - `android.hardware.sensor.stepcounter`: Step counter sensor feature
 
 ### Notification System

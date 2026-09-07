@@ -69,6 +69,17 @@ public class StepCounterService extends Service implements StepChangeListener {
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.i(TAG, "StepCounterService: onStartCommand is called!");
         StepCounterHelper.logToPrefs(this, "INFO", TAG, "onStartCommand called, flags=" + flags + " startId=" + startId);
+        try {
+            StepStore.getInstance(getApplicationContext()).heartbeat();
+        } catch (Exception ex) {
+            Log.w(TAG, "heartbeat failed: " + ex.getMessage());
+        }
+
+        if (intent != null && intent.getBooleanExtra(StepStoreTestHooks.EXTRA_CRASH_MID_WRITE, false)) {
+            // Storage test: open a transaction, insert rows, die. START_STICKY brings us back and
+            // SQLite must roll the transaction back. Never returns.
+            new Thread(() -> StepStoreTestHooks.crashServiceMidWrite(getApplicationContext())).start();
+        }
         return Service.START_STICKY;
     }
 
@@ -76,6 +87,8 @@ public class StepCounterService extends Service implements StepChangeListener {
     public void onCreate() {
         super.onCreate();
         Log.i(TAG, "StepCounterService: onCreate() is called!");
+        // Open the database once for this process (and migrate legacy prefs if this process is first).
+        StepStore.getInstance(getApplicationContext());
         StepCounterHelper.logToPrefs(this, "INFO", TAG, "onCreate called, isRunning=" + isRunning);
 
         if (isRunning /* || has no step sensors */)

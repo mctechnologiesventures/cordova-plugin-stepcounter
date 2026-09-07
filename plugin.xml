@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
         id="cordova-plugin-mc-stepcounter"
-        version="0.1.0">
+        version="0.2.0">
 
   <name>Cordova MC Step Counter Plugin</name>
   <repo>https://github.com/mctechnologiesventures/cordova-plugin-stepcounter</repo>
@@ -53,6 +53,24 @@
       <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
       <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
       <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+      <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+      <!-- Package visibility (targetSdk 30+): needed so OemBackgroundGuide can resolve the vendor
+           autostart / battery screens before offering to open them. -->
+      <queries>
+        <package android:name="com.miui.securitycenter" />
+        <package android:name="com.miui.powerkeeper" />
+        <package android:name="com.huawei.systemmanager" />
+        <package android:name="com.samsung.android.lool" />
+        <package android:name="com.samsung.android.sm_cn" />
+        <package android:name="com.samsung.android.sm" />
+        <package android:name="com.coloros.safecenter" />
+        <package android:name="com.coloros.oppoguardelf" />
+        <package android:name="com.oppo.safe" />
+        <package android:name="com.vivo.permissionmanager" />
+        <package android:name="com.iqoo.secure" />
+        <package android:name="com.oneplus.security" />
+        <package android:name="com.asus.mobilemanager" />
+      </queries>
     </config-file>
 
     <config-file target="res/xml/config.xml" parent="/*">
@@ -73,6 +91,10 @@
     <source-file src="src/android/StepCounterHelper.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
     <source-file src="src/android/StepCounterShutdownReceiver.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
     <source-file src="src/android/StepSensorManager.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
+    <source-file src="src/android/StepStore.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
+    <source-file src="src/android/StepStoreMigration.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
+    <source-file src="src/android/StepStoreTestHooks.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
+    <source-file src="src/android/OemBackgroundGuide.java" target-dir="src/com/mctechnologies/cordovapluginstepcounter/"/>
 
     <resource-file
       src="src/android/res/layout/sticky_notification.xml"

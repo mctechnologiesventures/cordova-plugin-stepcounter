@@ -119,4 +119,104 @@ module.exports = {
       []
     );
   },
+
+  // Returns { running, listedByActivityManager, heartbeatAt, heartbeatAgeMs, lastSensorAt, intendedRunning }
+  isServiceRunning: function (successCallback, errorCallback) {
+    cordova.exec(
+      function (result) {
+        successCallback(parseObject(result));
+      },
+      errorCallback,
+      "CordovaStepCounter",
+      "is_service_running",
+      []
+    );
+  },
+
+  // Returns the SQLite store diagnostics (row counts, meta, legacy file state, service status).
+  getStorageInfo: function (successCallback, errorCallback) {
+    cordova.exec(
+      function (result) {
+        successCallback(parseObject(result));
+      },
+      errorCallback,
+      "CordovaStepCounter",
+      "get_storage_info",
+      []
+    );
+  },
+
+  // Storage test mode. op: seed_legacy | migrate | verify | corrupt_legacy | crash_mid_write | checkpoint | reset
+  // Refused on release builds unless params.adminToken is set (the app passes it from its admin panel).
+  storageTest: function (op, params, successCallback, errorCallback) {
+    cordova.exec(
+      function (result) {
+        successCallback(parseObject(result));
+      },
+      errorCallback,
+      "CordovaStepCounter",
+      "storage_test",
+      [op, params || {}]
+    );
+  },
+
+  isIgnoringBatteryOptimizations: function (successCallback, errorCallback) {
+    cordova.exec(
+      function (res) {
+        successCallback(!!res);
+      },
+      errorCallback,
+      "CordovaStepCounter",
+      "is_ignoring_battery_optimizations",
+      []
+    );
+  },
+
+  // Opens the system dialog; resolves with the whitelist state after the user comes back.
+  requestIgnoreBatteryOptimizations: function (successCallback, errorCallback) {
+    cordova.exec(
+      function (res) {
+        successCallback(!!res);
+      },
+      errorCallback,
+      "CordovaStepCounter",
+      "request_ignore_battery_optimizations",
+      []
+    );
+  },
+
+  // Returns { manufacturer, brand, model, sdkInt, oem, autostartResolvable, batteryResolvable }
+  getOemGuide: function (successCallback, errorCallback) {
+    cordova.exec(
+      function (result) {
+        successCallback(parseObject(result));
+      },
+      errorCallback,
+      "CordovaStepCounter",
+      "get_oem_guide",
+      []
+    );
+  },
+
+  // which: 'autostart' | 'battery'. Resolves with the screen actually opened ('app_details' on fallback).
+  openOemSettings: function (which, successCallback, errorCallback) {
+    cordova.exec(
+      successCallback,
+      errorCallback,
+      "CordovaStepCounter",
+      "open_oem_settings",
+      [which || "autostart"]
+    );
+  },
 };
+
+function parseObject(result) {
+  if (typeof result === "string") {
+    try {
+      return JSON.parse(result);
+    } catch (e) {
+      return result;
+    }
+  }
+  return result;
+}

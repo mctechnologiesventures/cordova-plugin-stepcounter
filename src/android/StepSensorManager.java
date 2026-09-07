@@ -114,6 +114,11 @@ public class StepSensorManager implements SensorEventListener {
                 }
             }
 
+            if (sensorValue == lastSensorValue) {
+                // Batched deliveries on AP wake repeat the last cumulative value; nothing to store.
+                return;
+            }
+
             lastSensorValue = sensorValue;
             Log.d(TAG, "SENSOR_EVENT: value=" + sensorValue + " timestamp=" + event.timestamp);
             listener.onChanged(sensorValue);
