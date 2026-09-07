@@ -225,6 +225,9 @@ public class StepCounterService extends Service implements StepChangeListener {
         ApplicationInfo appInfo = getApplicationInfo();
         String appName = pm.getApplicationLabel(appInfo).toString();
         int appIconRes = getResources().getIdentifier("ic_notification", "drawable", getPackageName());
+        if (appIconRes == 0) {
+            appIconRes = appInfo.icon != 0 ? appInfo.icon : android.R.drawable.ic_dialog_info;
+        }
         int baseFlags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
           baseFlags |= PendingIntent.FLAG_IMMUTABLE;
@@ -232,7 +235,7 @@ public class StepCounterService extends Service implements StepChangeListener {
         builder = new NotificationCompat.Builder(this, createChannel())
           .setSmallIcon(appIconRes)
           .setContentTitle(appName)   // shown if the system decides not to use your custom RemoteViews
-          .setContentText("")
+          .setContentText(stepsText(0))
           .setOngoing(true)
           .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
           .setPriority(NotificationCompat.PRIORITY_MAX)
@@ -244,45 +247,59 @@ public class StepCounterService extends Service implements StepChangeListener {
             )
           );
 
-        //custom notification UI...
-        RemoteViews views = new RemoteViews(getPackageName(), getResources().getIdentifier( "sticky_notification",
-                                                                                            "layout",
-                                                                                            getPackageName()));
-      int id = getResources().getIdentifier("mct_sc_notification_steps", "string", getPackageName());
-      String stepsText = String.format(getString(id), 0);
-      views.setTextViewText(getResources().getIdentifier( "tvSteps",
-        "id",
-        getPackageName()), stepsText);
-      builder
-        .setCustomContentView(views)
-        .setCustomBigContentView(views)
-        .setStyle(new NotificationCompat.DecoratedCustomViewStyle());
+        applyStepsView(0);
 
-      Notification notification = builder.build();
-
-      // Start foreground service...
-      startForeground(NOTIFICATION_ID, notification);
+        // Start foreground service. This must happen no matter what the custom layout did: a service
+        // started with startForegroundService() that never calls startForeground() is killed by the
+        // system, which is exactly the "service silently gone" failure on aggressive OEMs.
+        startForeground(NOTIFICATION_ID, builder.build());
     }
 
     @SuppressLint("DiscouragedApi")
     private void updateNotification(int steps){
         Log.d(TAG, "StepCounterService: Updating the notification ...");
-        RemoteViews views = new RemoteViews(getPackageName(), getResources().getIdentifier( "sticky_notification",
-                                                                                            "layout",
-                                                                                            getPackageName()));
-      int id = getResources().getIdentifier("mct_sc_notification_steps", "string", getPackageName());
-      String stepsText = String.format(getString(id), steps);
-      views.setTextViewText(getResources().getIdentifier( "tvSteps",
-        "id",
-        getPackageName()), stepsText);
-      builder
-        .setCustomContentView(views)
-        .setCustomBigContentView(views)
-        .setStyle(new NotificationCompat.DecoratedCustomViewStyle());
+        if (builder == null) return;
+        builder.setContentText(stepsText(steps));
+        applyStepsView(steps);
 
         NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if(manager != null)
             manager.notify(NOTIFICATION_ID, builder.build());
+    }
+
+    /** "Steps: N" from the plugin string resource, with a hard-coded fallback if the resource is missing. */
+    @SuppressLint("DiscouragedApi")
+    private String stepsText(int steps) {
+        try {
+            int id = getResources().getIdentifier("mct_sc_notification_steps", "string", getPackageName());
+            if (id != 0) {
+                return String.format(getString(id), steps);
+            }
+        } catch (Exception ex) {
+            Log.w(TAG, "mct_sc_notification_steps missing: " + ex.getMessage());
+        }
+        return String.format(Locale.getDefault(), "Steps: %d", steps);
+    }
+
+    /** Attaches the custom notification layout when all its resources resolve; otherwise the plain text stays. */
+    @SuppressLint("DiscouragedApi")
+    private void applyStepsView(int steps) {
+        try {
+            int layoutId = getResources().getIdentifier("sticky_notification", "layout", getPackageName());
+            int textId = getResources().getIdentifier("tvSteps", "id", getPackageName());
+            if (layoutId == 0 || textId == 0) {
+                Log.w(TAG, "Custom notification layout not found, using plain notification");
+                return;
+            }
+            RemoteViews views = new RemoteViews(getPackageName(), layoutId);
+            views.setTextViewText(textId, stepsText(steps));
+            builder
+              .setCustomContentView(views)
+              .setCustomBigContentView(views)
+              .setStyle(new NotificationCompat.DecoratedCustomViewStyle());
+        } catch (Exception ex) {
+            Log.w(TAG, "Custom notification layout failed, using plain notification: " + ex.getMessage());
+        }
     }
 
     @NonNull

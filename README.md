@@ -111,6 +111,14 @@ whole file with one flag, which is how devices lost their entire history. The fi
 file read-only for 30 days as a fallback, then deletes it. A legacy file that exists but reads
 back empty is retried on later opens instead of being treated as "nothing to migrate".
 
+## Changes in 0.2.1
+- Notification string and colour ship as the plugin's own `res/values/mct_stepcounter.xml`.
+  cordova-android 15 has no `res/values/strings.xml` / `colors.xml`, so the old config-file
+  injection was skipped and the service died before `startForeground()`.
+- The foreground notification always starts, falling back to a plain text notification when the
+  custom layout or any of its resources is missing.
+- `isServiceRunning` trusts ActivityManager; the heartbeat only decides when that query fails.
+
 ## Changes in 0.2.0
 - Storage moved from SharedPreferences JSON to SQLite with a one-time migration (see above).
 - `get_step_count` now adds the day delta only (it was roughly doubled before).

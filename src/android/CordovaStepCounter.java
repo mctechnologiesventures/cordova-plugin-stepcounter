@@ -264,7 +264,7 @@ public class CordovaStepCounter extends CordovaPlugin {
     private JSONObject serviceStatus(Context ctx) {
         JSONObject status = new JSONObject();
         try {
-            boolean listed = isServiceListed(ctx);
+            Boolean listed = isServiceListed(ctx);
             StepStore store = StepStore.getInstance(ctx);
             long now = System.currentTimeMillis();
             Long heartbeatAt = parseLong(store.getMeta(StepStore.META_HEARTBEAT_AT));
@@ -272,8 +272,11 @@ public class CordovaStepCounter extends CordovaPlugin {
             long heartbeatAge = heartbeatAt == null ? -1 : now - heartbeatAt;
             SharedPreferences prefs = ctx.getSharedPreferences("StepCounterState", Context.MODE_PRIVATE);
 
-            status.put("running", listed || (heartbeatAge >= 0 && heartbeatAge < HEARTBEAT_ALIVE_MS));
-            status.put("listedByActivityManager", listed);
+            // ActivityManager is the authority: a killed service still has a recent heartbeat.
+            // The heartbeat only decides when the ActivityManager query itself failed.
+            boolean running = listed != null ? listed : (heartbeatAge >= 0 && heartbeatAge < HEARTBEAT_ALIVE_MS);
+            status.put("running", running);
+            status.put("listedByActivityManager", listed == null ? JSONObject.NULL : listed);
             status.put("heartbeatAt", heartbeatAt == null ? JSONObject.NULL : heartbeatAt);
             status.put("heartbeatAgeMs", heartbeatAge);
             status.put("lastSensorAt", lastSensorAt == null ? JSONObject.NULL : lastSensorAt);
@@ -284,10 +287,11 @@ public class CordovaStepCounter extends CordovaPlugin {
         return status;
     }
 
+    /** @return true/false from ActivityManager, or null when the query is unavailable. */
     @SuppressWarnings("deprecation")
-    private boolean isServiceListed(Context ctx) {
+    private Boolean isServiceListed(Context ctx) {
         ActivityManager manager = (ActivityManager) ctx.getSystemService(Context.ACTIVITY_SERVICE);
-        if (manager == null) return false;
+        if (manager == null) return null;
         try {
             // Deprecated since API 26 but still returns the caller's own services.
             for (ActivityManager.RunningServiceInfo info : manager.getRunningServices(Integer.MAX_VALUE)) {
@@ -295,10 +299,11 @@ public class CordovaStepCounter extends CordovaPlugin {
                     return true;
                 }
             }
+            return false;
         } catch (Exception e) {
             Log.w(TAG, "getRunningServices failed: " + e.getMessage());
+            return null;
         }
-        return false;
     }
 
     private static Long parseLong(String value) {
