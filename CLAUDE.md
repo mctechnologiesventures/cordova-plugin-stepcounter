@@ -92,6 +92,7 @@ Required Android permissions:
 - `FOREGROUND_SERVICE`: Run background service
 - `FOREGROUND_SERVICE_HEALTH`: Health-related foreground service
 - `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`: Battery optimization exemption prompt
+- `POST_NOTIFICATIONS`: Android 13+ runtime permission, needed for the foreground notification to be visible
 - `android.hardware.sensor.stepcounter`: Step counter sensor feature
 
 ### Notification System

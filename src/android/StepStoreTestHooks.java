@@ -116,7 +116,7 @@ class StepStoreTestHooks {
         SQLiteDatabase db = store.getWritableDatabase();
         db.beginTransaction();
         try {
-            StepStoreMigration.clearMarkers(store, db);
+            StepStoreMigration.clearMarkers(store, db, StepStoreMigration.TEST_META_PREFIX);
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
@@ -230,7 +230,8 @@ class StepStoreTestHooks {
         checks.put("historyMatchesDb", history.length() == hourLines.size() && historyChecksum.equals(dbHourChecksum));
         checks.put("integrityOk", "ok".equalsIgnoreCase(integrity));
         checks.put("walEnabled", "wal".equalsIgnoreCase(journalMode));
-        checks.put("migrationMarked", meta.has(StepStoreMigration.META_MIGRATED_AT));
+        checks.put("migrationMarked", meta.has(StepStoreMigration.TEST_META_PREFIX + StepStoreMigration.META_MIGRATED_AT));
+        checks.put("realMarkersIntact", meta.has(StepStoreMigration.META_MIGRATED_AT));
         checks.put("noCrashRows", countCrashRows(db) == 0);
         result.put("checks", checks);
         result.put("missingInDb", missing);
@@ -287,7 +288,7 @@ class StepStoreTestHooks {
         SQLiteDatabase db = store.getWritableDatabase();
         db.beginTransaction();
         try {
-            store.setMeta(db, StepStoreMigration.META_MIGRATED_AT, null);
+            store.setMeta(db, StepStoreMigration.TEST_META_PREFIX + StepStoreMigration.META_MIGRATED_AT, null);
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
@@ -393,7 +394,7 @@ class StepStoreTestHooks {
                 db.execSQL("DELETE FROM meta");
             } else {
                 db.execSQL("DELETE FROM period WHERE key < ?", new Object[]{StepStore.SENTINEL_KEY_LIMIT});
-                StepStoreMigration.clearMarkers(store, db);
+                StepStoreMigration.clearMarkers(store, db, StepStoreMigration.TEST_META_PREFIX);
             }
             db.setTransactionSuccessful();
         } finally {

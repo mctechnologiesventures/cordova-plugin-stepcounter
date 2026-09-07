@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
         id="cordova-plugin-mc-stepcounter"
-        version="0.2.1">
+        version="0.2.2">
 
   <name>Cordova MC Step Counter Plugin</name>
   <repo>https://github.com/mctechnologiesventures/cordova-plugin-stepcounter</repo>
@@ -54,6 +54,9 @@
       <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
       <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
       <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+      <!-- Android 13+: the foreground service notification is hidden until the user grants this
+           runtime permission; the host app must request it (the app's pedometer wrapper does). -->
+      <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
       <!-- Package visibility (targetSdk 30+): needed so OemBackgroundGuide can resolve the vendor
            autostart / battery screens before offering to open them. -->
       <queries>

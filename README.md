@@ -111,6 +111,13 @@ whole file with one flag, which is how devices lost their entire history. The fi
 file read-only for 30 days as a fallback, then deletes it. A legacy file that exists but reads
 back empty is retried on later opens instead of being treated as "nothing to migrate".
 
+## Changes in 0.2.2
+- Declares `POST_NOTIFICATIONS`; on Android 13+ the host app must also request it at runtime or
+  the foreground service runs without a visible notification.
+- Storage test mode keeps its migration markers under a `test_` prefix, so running the
+  sequence no longer clears the real migration markers or restarts the 30-day retention.
+- `verify` reports `realMarkersIntact`.
+
 ## Changes in 0.2.1
 - Notification string and colour ship as the plugin's own `res/values/mct_stepcounter.xml`.
   cordova-android 15 has no `res/values/strings.xml` / `colors.xml`, so the old config-file
