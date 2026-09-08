@@ -90,35 +90,23 @@ class StepStoreMigration {
     }
 
     static JSONObject runIfNeeded(@NonNull Context context, @NonNull StepStore store) {
-        return run(context, store, false, LEGACY_PREFS);
-    }
-
-    /** Test runs (any prefs file other than the real one) keep their markers under this prefix. */
-    static final String TEST_META_PREFIX = "test_";
-
-    static String metaPrefix(String prefsName) {
-        return LEGACY_PREFS.equals(prefsName) ? "" : TEST_META_PREFIX;
-    }
-
-    static JSONObject run(@NonNull Context context, @NonNull StepStore store, boolean force, @NonNull String prefsName) {
         JSONObject report = new JSONObject();
         SQLiteDatabase db = store.getWritableDatabase();
-        String prefix = metaPrefix(prefsName);
+        String prefsName = LEGACY_PREFS;
         db.beginTransaction();
         try {
             long now = System.currentTimeMillis();
-            String migratedAt = store.getMeta(db, prefix + META_MIGRATED_AT);
+            String migratedAt = store.getMeta(db, META_MIGRATED_AT);
 
-            if (!force && migratedAt != null) {
-                if (prefix.isEmpty()) maybeDeleteLegacy(context, store, db, migratedAt, now);
+            if (migratedAt != null) {
+                maybeDeleteLegacy(context, store, db, migratedAt, now);
                 report.put("status", "already_migrated");
-                report.put("legacyStatus", store.getMeta(db, prefix + META_STATUS));
+                report.put("legacyStatus", store.getMeta(db, META_STATUS));
                 db.setTransactionSuccessful();
                 return report;
             }
 
             LegacySnapshot legacy = readLegacy(context, prefsName);
-            report.put("prefsName", prefsName);
             report.put("legacyFileExists", legacy.fileExists);
             report.put("legacyFileSize", legacy.fileSize);
             report.put("legacyDayRows", legacy.dayRows);
@@ -145,7 +133,7 @@ class StepStoreMigration {
                 if (legacy.total != null && store.getMeta(db, StepStore.META_TOTAL_COUNT) == null) {
                     store.setMeta(db, StepStore.META_TOTAL_COUNT, String.valueOf(legacy.total));
                 }
-                markMigrated(store, db, prefix, now, STATUS_MIGRATED, legacy, conflicts);
+                markMigrated(store, db, now, STATUS_MIGRATED, legacy, conflicts);
                 report.put("status", STATUS_MIGRATED);
                 report.put("inserted", inserted);
                 report.put("ignored", ignored);
@@ -155,11 +143,11 @@ class StepStoreMigration {
             } else if (legacy.mapEmpty && legacy.fileExists && legacy.fileSize > EMPTY_FILE_THRESHOLD_BYTES) {
                 // The file has content but the platform handed us an empty map: exactly the
                 // mid-write / corrupt-XML case. Never conclude "nothing to migrate" from it.
-                int attempts = parseInt(store.getMeta(db, prefix + META_ATTEMPTS)) + 1;
-                store.setMeta(db, prefix + META_ATTEMPTS, String.valueOf(attempts));
+                int attempts = parseInt(store.getMeta(db, META_ATTEMPTS)) + 1;
+                store.setMeta(db, META_ATTEMPTS, String.valueOf(attempts));
                 report.put("attempts", attempts);
                 if (attempts >= MAX_ATTEMPTS) {
-                    markMigrated(store, db, prefix, now, STATUS_UNREADABLE, legacy, 0);
+                    markMigrated(store, db, now, STATUS_UNREADABLE, legacy, 0);
                     report.put("status", STATUS_UNREADABLE);
                     store.log("ERROR", TAG, "Legacy prefs " + prefsName + " unreadable after " + attempts + " attempts (size=" +
                             legacy.fileSize + ")");
@@ -169,7 +157,7 @@ class StepStoreMigration {
                             "), attempt " + attempts + ", will retry");
                 }
             } else {
-                markMigrated(store, db, prefix, now, STATUS_EMPTY, legacy, 0);
+                markMigrated(store, db, now, STATUS_EMPTY, legacy, 0);
                 report.put("status", STATUS_EMPTY);
                 store.log("INFO", TAG, "No legacy step data in " + prefsName + " (exists=" + legacy.fileExists +
                         " size=" + legacy.fileSize + ")");
@@ -190,26 +178,14 @@ class StepStoreMigration {
         return report;
     }
 
-    private static void markMigrated(StepStore store, SQLiteDatabase db, String prefix, long now, String status, LegacySnapshot legacy, int conflicts) {
-        store.setMeta(db, prefix + META_MIGRATED_AT, String.valueOf(now));
-        store.setMeta(db, prefix + META_STATUS, status);
-        store.setMeta(db, prefix + META_DAY_ROWS, String.valueOf(legacy.dayRows));
-        store.setMeta(db, prefix + META_HOUR_ROWS, String.valueOf(legacy.hourRows));
-        store.setMeta(db, prefix + META_CHECKSUM, legacy.checksum);
-        store.setMeta(db, prefix + META_CONFLICTS, String.valueOf(conflicts));
-        store.setMeta(db, prefix + META_ATTEMPTS, null);
-    }
-
-    /** Clears the migration markers under `prefix` ("" = real, TEST_META_PREFIX = test mode). */
-    static void clearMarkers(StepStore store, SQLiteDatabase db, String prefix) {
-        store.setMeta(db, prefix + META_MIGRATED_AT, null);
-        store.setMeta(db, prefix + META_STATUS, null);
-        store.setMeta(db, prefix + META_DAY_ROWS, null);
-        store.setMeta(db, prefix + META_HOUR_ROWS, null);
-        store.setMeta(db, prefix + META_CHECKSUM, null);
-        store.setMeta(db, prefix + META_CONFLICTS, null);
-        store.setMeta(db, prefix + META_ATTEMPTS, null);
-        store.setMeta(db, prefix + META_DELETED_AT, null);
+    private static void markMigrated(StepStore store, SQLiteDatabase db, long now, String status, LegacySnapshot legacy, int conflicts) {
+        store.setMeta(db, META_MIGRATED_AT, String.valueOf(now));
+        store.setMeta(db, META_STATUS, status);
+        store.setMeta(db, META_DAY_ROWS, String.valueOf(legacy.dayRows));
+        store.setMeta(db, META_HOUR_ROWS, String.valueOf(legacy.hourRows));
+        store.setMeta(db, META_CHECKSUM, legacy.checksum);
+        store.setMeta(db, META_CONFLICTS, String.valueOf(conflicts));
+        store.setMeta(db, META_ATTEMPTS, null);
     }
 
     private static void maybeDeleteLegacy(Context context, StepStore store, SQLiteDatabase db, String migratedAt, long now) {

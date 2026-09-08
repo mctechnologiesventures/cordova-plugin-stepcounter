@@ -30,7 +30,6 @@ import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -55,7 +54,6 @@ public class CordovaStepCounter extends CordovaPlugin {
     private static final String ACTION_CLEAR_LOGS       = "clear_logs";
     private static final String ACTION_IS_SERVICE_RUNNING = "is_service_running";
     private static final String ACTION_GET_STORAGE_INFO = "get_storage_info";
-    private static final String ACTION_STORAGE_TEST     = "storage_test";
     private static final String ACTION_IS_IGNORING_BATTERY = "is_ignoring_battery_optimizations";
     private static final String ACTION_REQUEST_IGNORE_BATTERY = "request_ignore_battery_optimizations";
     private static final String ACTION_GET_OEM_GUIDE    = "get_oem_guide";
@@ -64,23 +62,20 @@ public class CordovaStepCounter extends CordovaPlugin {
     private static final int REQUEST_IGNORE_BATTERY = 7701;
     /** Heartbeat age under which the service is considered alive even if not listed by ActivityManager. */
     private static final long HEARTBEAT_ALIVE_MS = 15L * 60 * 1000;
-    /**
-     * Storage tests are refused on release builds unless the caller passes this token. The app only
-     * sends it from its admin-only diagnostics panel; it is a belt-and-braces guard, not a secret.
-     */
-    private static final String STORAGE_TEST_ADMIN_TOKEN = "stepathon-admin-diagnostics";
-
     private CallbackContext batteryCallback;
 
     @Override
     protected void pluginInitialize() {
         super.pluginInitialize();
-        try {
-            // Opens the database once for the UI process and runs the legacy migration if needed.
-            StepStore.getInstance(cordova.getContext());
-        } catch (Exception ex) {
-            Log.e(TAG, "StepStore init failed: " + ex.getMessage(), ex);
-        }
+        // Opens the database for the UI process and runs the legacy migration if this process is
+        // first. Off the UI thread: a large legacy history takes a moment to copy.
+        cordova.getThreadPool().execute(() -> {
+            try {
+                StepStore.getInstance(cordova.getContext());
+            } catch (Exception ex) {
+                Log.e(TAG, "StepStore init failed: " + ex.getMessage(), ex);
+            }
+        });
     }
 
     @Override
@@ -223,16 +218,6 @@ public class CordovaStepCounter extends CordovaPlugin {
                 }
             });
         }
-        else if (ACTION_STORAGE_TEST.equals(action)) {
-            String op = data.optString(0, "");
-            JSONObject params = data.optJSONObject(1);
-            final JSONObject safeParams = params == null ? new JSONObject() : params;
-            if (!storageTestAllowed(ctx, safeParams)) {
-                callbackContext.error("storage_test is only available on debug builds or with the admin token");
-                return true;
-            }
-            cordova.getThreadPool().execute(() -> callbackContext.success(StepStoreTestHooks.run(ctx, op, safeParams)));
-        }
         else if (ACTION_IS_IGNORING_BATTERY.equals(action)) {
             callbackContext.success(isIgnoringBatteryOptimizations(ctx) ? 1 : 0);
         }
@@ -360,11 +345,6 @@ public class CordovaStepCounter extends CordovaPlugin {
     }
 
     //endregion
-
-    private boolean storageTestAllowed(Context ctx, JSONObject params) {
-        boolean debuggable = (ctx.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
-        return debuggable || STORAGE_TEST_ADMIN_TOKEN.equals(params.optString("adminToken", ""));
-    }
 
     private static boolean deviceHasStepCounter(PackageManager pm) {
         // Check that the device supports the step counter and detector sensors

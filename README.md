@@ -76,9 +76,8 @@ Edit `www/js/index.html` and add the following code inside `onDeviceReady`
     stepcounter.getOemGuide(success, failure);          // {manufacturer, model, oem, autostartResolvable, batteryResolvable}
     stepcounter.openOemSettings('autostart', success, failure); // or 'battery'; falls back to the app details page
 
-    // Storage diagnostics and test mode (see TESTING.md)
+    // Storage diagnostics (see TESTING.md)
     stepcounter.getStorageInfo(success, failure);
-    stepcounter.storageTest('verify', {}, success, failure);
 
 ```
 
@@ -111,12 +110,15 @@ whole file with one flag, which is how devices lost their entire history. The fi
 file read-only for 30 days as a fallback, then deletes it. A legacy file that exists but reads
 back empty is retried on later opens instead of being treated as "nothing to migrate".
 
+## Changes in 0.2.3
+- The service calls `startForeground()` first thing in `onCreate()`, before the store is opened, so
+  a large legacy migration can never delay it.
+- The plugin opens the store off the UI thread.
+- Removed the `storage_test` test mode; TESTING.md describes the adb-based upgrade test instead.
+
 ## Changes in 0.2.2
 - Declares `POST_NOTIFICATIONS`; on Android 13+ the host app must also request it at runtime or
   the foreground service runs without a visible notification.
-- Storage test mode keeps its migration markers under a `test_` prefix, so running the
-  sequence no longer clears the real migration markers or restarts the 30-day retention.
-- `verify` reports `realMarkersIntact`.
 
 ## Changes in 0.2.1
 - Notification string and colour ship as the plugin's own `res/values/mct_stepcounter.xml`.
@@ -131,7 +133,7 @@ back empty is retried on later opens instead of being treated as "nothing to mig
 - `get_step_count` now adds the day delta only (it was roughly doubled before).
 - Persistent logs moved into the database; `getLogs()` / `clearLogs()` keep their shape.
 - New: `isServiceRunning`, `isIgnoringBatteryOptimizations`, `requestIgnoreBatteryOptimizations`,
-  `getOemGuide`, `openOemSettings`, `getStorageInfo`, `storageTest`.
+  `getOemGuide`, `openOemSettings`, `getStorageInfo`.
 - New permission `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` and a `<queries>` block for the vendor
   settings packages.
 - Sensor events that repeat the last cumulative value are ignored.

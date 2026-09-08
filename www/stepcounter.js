@@ -146,20 +146,6 @@ module.exports = {
     );
   },
 
-  // Storage test mode. op: seed_legacy | migrate | verify | corrupt_legacy | crash_mid_write | checkpoint | reset
-  // Refused on release builds unless params.adminToken is set (the app passes it from its admin panel).
-  storageTest: function (op, params, successCallback, errorCallback) {
-    cordova.exec(
-      function (result) {
-        successCallback(parseObject(result));
-      },
-      errorCallback,
-      "CordovaStepCounter",
-      "storage_test",
-      [op, params || {}]
-    );
-  },
-
   isIgnoringBatteryOptimizations: function (successCallback, errorCallback) {
     cordova.exec(
       function (res) {

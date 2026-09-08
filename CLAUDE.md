@@ -34,7 +34,7 @@ cordova plugin add https://github.com/DigitalsunrayMedia/cordova-plugin-stepcoun
 ### Core Components
 
 **JavaScript Interface (`www/stepcounter.js`)**
-- Exports stepcounter module with methods: start(), stop(), getTodayStepCount(), getStepCount(), deviceCanCountSteps(), getHistory(), getLogs(), clearLogs(), isServiceRunning(), isIgnoringBatteryOptimizations(), requestIgnoreBatteryOptimizations(), getOemGuide(), openOemSettings(), getStorageInfo(), storageTest()
+- Exports stepcounter module with methods: start(), stop(), getTodayStepCount(), getStepCount(), deviceCanCountSteps(), getHistory(), getLogs(), clearLogs(), isServiceRunning(), isIgnoringBatteryOptimizations(), requestIgnoreBatteryOptimizations(), getOemGuide(), openOemSettings(), getStorageInfo()
 - All methods use cordova.exec() to communicate with native Android code
 - Handles JSON parsing for history data
 
@@ -82,8 +82,8 @@ the file is deleted 30 days after a successful migration. Never write to `UserDa
 commit from the UI process rewrites the whole file from that process's in-memory map, and an empty
 read followed by a commit is what wiped devices.
 
-`src/android/StepStoreTestHooks.java` implements the `storage_test` action (see TESTING.md);
-`src/android/OemBackgroundGuide.java` resolves and opens vendor autostart/battery screens.
+`src/android/OemBackgroundGuide.java` resolves and opens vendor autostart/battery screens. TESTING.md
+describes the on-device upgrade test.
 
 ### Permissions and Features
 

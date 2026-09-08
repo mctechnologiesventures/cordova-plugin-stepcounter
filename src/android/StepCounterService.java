@@ -74,12 +74,6 @@ public class StepCounterService extends Service implements StepChangeListener {
         } catch (Exception ex) {
             Log.w(TAG, "heartbeat failed: " + ex.getMessage());
         }
-
-        if (intent != null && intent.getBooleanExtra(StepStoreTestHooks.EXTRA_CRASH_MID_WRITE, false)) {
-            // Storage test: open a transaction, insert rows, die. START_STICKY brings us back and
-            // SQLite must roll the transaction back. Never returns.
-            new Thread(() -> StepStoreTestHooks.crashServiceMidWrite(getApplicationContext())).start();
-        }
         return Service.START_STICKY;
     }
 
@@ -87,6 +81,16 @@ public class StepCounterService extends Service implements StepChangeListener {
     public void onCreate() {
         super.onCreate();
         Log.i(TAG, "StepCounterService: onCreate() is called!");
+
+        // Foreground first, before anything that touches storage: a service started with
+        // startForegroundService() is killed if startForeground() is late, and the first open of
+        // the store may be copying a large legacy history.
+        try {
+            startForegroundService();
+        } catch (Exception ex) {
+            Log.e(TAG, "StepCounterService: startForeground failed: " + ex.getMessage(), ex);
+        }
+
         // Open the database once for this process (and migrate legacy prefs if this process is first).
         StepStore.getInstance(getApplicationContext());
         StepCounterHelper.logToPrefs(this, "INFO", TAG, "onCreate called, isRunning=" + isRunning);
@@ -130,8 +134,10 @@ public class StepCounterService extends Service implements StepChangeListener {
             stepSensorManager = new StepSensorManager();
             stepSensorManager.start(this, this, SensorManager.SENSOR_DELAY_NORMAL);
 
-            //Start foreground service with an sticky notification...
-            startForegroundService();
+            //Foreground service with a sticky notification (already up from onCreate; harmless to repeat)...
+            if (builder == null) {
+                startForegroundService();
+            }
             StepCounterHelper.logToPrefs(this, "INFO", TAG, "doInit: Foreground service started");
 
             //This is broadcast when the device is being shut down (completely turned off, not sleeping).

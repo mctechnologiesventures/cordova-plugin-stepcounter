@@ -45,9 +45,6 @@ public class StepStore extends SQLiteOpenHelper {
     static final String DAY_PATTERN = "yyyy-MM-dd";
     static final String HOUR_PATTERN = "yyyy-MM-dd HH";
 
-    /** Rows with a key below this are synthetic test rows (see StepStoreTestHooks). */
-    static final String SENTINEL_KEY_LIMIT = "2002";
-
     static final String META_TOTAL_COUNT = "total_count";
     static final String META_HEARTBEAT_AT = "service_heartbeat_at";
     static final String META_LAST_SENSOR_AT = "last_sensor_at";
@@ -349,12 +346,12 @@ public class StepStore extends SQLiteOpenHelper {
         }
     }
 
-    /** Must be called inside a transaction. Sentinel test rows are left alone. */
+    /** Must be called inside a transaction. */
     void prune(SQLiteDatabase db, Date now) {
         String hourCutoff = formatKey(HOUR_PATTERN, daysAgo(now, HOUR_RETENTION_DAYS));
         String dayCutoff = formatKey(DAY_PATTERN, daysAgo(now, DAY_RETENTION_DAYS));
-        db.execSQL("DELETE FROM period WHERE kind=? AND key<? AND key>=?", new Object[]{KIND_HOUR, hourCutoff, SENTINEL_KEY_LIMIT});
-        db.execSQL("DELETE FROM period WHERE kind=? AND key<? AND key>=?", new Object[]{KIND_DAY, dayCutoff, SENTINEL_KEY_LIMIT});
+        db.execSQL("DELETE FROM period WHERE kind=? AND key<?", new Object[]{KIND_HOUR, hourCutoff});
+        db.execSQL("DELETE FROM period WHERE kind=? AND key<?", new Object[]{KIND_DAY, dayCutoff});
         db.execSQL("DELETE FROM log WHERE id <= (SELECT COALESCE(MAX(id), 0) FROM log) - " + LOG_RETENTION_ROWS);
         setMeta(db, META_LAST_PRUNE_AT, String.valueOf(now.getTime()));
     }
@@ -443,12 +440,8 @@ public class StepStore extends SQLiteOpenHelper {
 
     //region Diagnostics
 
-    synchronized int countPeriods(String kind, boolean sentinelOnly) {
-        SQLiteDatabase db = getReadableDatabase();
-        String sql = sentinelOnly
-                ? "SELECT COUNT(*) FROM period WHERE kind=? AND key<'" + SENTINEL_KEY_LIMIT + "'"
-                : "SELECT COUNT(*) FROM period WHERE kind=?";
-        try (Cursor c = db.rawQuery(sql, new String[]{kind})) {
+    synchronized int countPeriods(String kind) {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT COUNT(*) FROM period WHERE kind=?", new String[]{kind})) {
             return c.moveToFirst() ? c.getInt(0) : 0;
         }
     }
@@ -464,12 +457,10 @@ public class StepStore extends SQLiteOpenHelper {
             info.put("walSizeBytes", walFile.exists() ? walFile.length() : 0);
             info.put("schemaVersion", db.getVersion());
             info.put("journalMode", pragmaString(db, "journal_mode"));
-            info.put("dayRows", countPeriods(KIND_DAY, false));
-            info.put("hourRows", countPeriods(KIND_HOUR, false));
-            info.put("sentinelRows", countPeriods(KIND_DAY, true) + countPeriods(KIND_HOUR, true));
+            info.put("dayRows", countPeriods(KIND_DAY));
+            info.put("hourRows", countPeriods(KIND_HOUR));
             info.put("totalCount", getTotalCount(db));
-            try (Cursor c = db.rawQuery("SELECT MIN(key), MAX(key) FROM period WHERE kind=? AND key>=?",
-                    new String[]{KIND_HOUR, SENTINEL_KEY_LIMIT})) {
+            try (Cursor c = db.rawQuery("SELECT MIN(key), MAX(key) FROM period WHERE kind=?", new String[]{KIND_HOUR})) {
                 if (c.moveToFirst()) {
                     info.put("oldestHourKey", c.isNull(0) ? JSONObject.NULL : c.getString(0));
                     info.put("newestHourKey", c.isNull(1) ? JSONObject.NULL : c.getString(1));
