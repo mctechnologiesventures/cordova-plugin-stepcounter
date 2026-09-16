@@ -58,6 +58,15 @@ public class CordovaStepCounter extends CordovaPlugin {
     private static final String ACTION_REQUEST_IGNORE_BATTERY = "request_ignore_battery_optimizations";
     private static final String ACTION_GET_OEM_GUIDE    = "get_oem_guide";
     private static final String ACTION_OPEN_OEM_SETTINGS = "open_oem_settings";
+    private static final String ACTION_GET_CAPABILITIES = "get_capabilities";
+
+    static final String PLUGIN_VERSION = "0.2.4";
+    private static final String[] ALL_ACTIONS = {
+        ACTION_START, ACTION_STOP, ACTION_GET_STEPS, ACTION_GET_TODAY_STEPS, ACTION_CAN_COUNT_STEPS, ACTION_GET_HISTORY,
+        ACTION_GET_LOGS, ACTION_CLEAR_LOGS, ACTION_IS_SERVICE_RUNNING, ACTION_GET_STORAGE_INFO,
+        ACTION_IS_IGNORING_BATTERY, ACTION_REQUEST_IGNORE_BATTERY, ACTION_GET_OEM_GUIDE, ACTION_OPEN_OEM_SETTINGS,
+        ACTION_GET_CAPABILITIES,
+    };
 
     private static final int REQUEST_IGNORE_BATTERY = 7701;
     /** Heartbeat age under which the service is considered alive even if not listed by ActivityManager. */
@@ -218,10 +227,18 @@ public class CordovaStepCounter extends CordovaPlugin {
                 }
             });
         }
+        else if (ACTION_GET_CAPABILITIES.equals(action)) {
+            callbackContext.success(capabilities(ctx));
+        }
         else if (ACTION_IS_IGNORING_BATTERY.equals(action)) {
             callbackContext.success(isIgnoringBatteryOptimizations(ctx) ? 1 : 0);
         }
         else if (ACTION_REQUEST_IGNORE_BATTERY.equals(action)) {
+            if (!manifestDeclares(ctx, android.Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)) {
+                // Never fire the intent without the permission: the system rejects it.
+                callbackContext.error("permission_not_declared: REQUEST_IGNORE_BATTERY_OPTIMIZATIONS");
+                return true;
+            }
             requestIgnoreBatteryOptimizations(ctx, callbackContext);
         }
         else if (ACTION_GET_OEM_GUIDE.equals(action)) {
@@ -298,6 +315,50 @@ public class CordovaStepCounter extends CordovaPlugin {
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    //endregion
+
+    //region Capabilities
+
+    /**
+     * What this native build can do, so the JavaScript side can gate UI before calling anything.
+     * Permissions are read from the INSTALLED manifest, not assumed from the plugin version: an app
+     * built with a config.xml that strips a permission must not offer the feature.
+     */
+    private JSONObject capabilities(Context ctx) {
+        JSONObject result = new JSONObject();
+        try {
+            result.put("version", PLUGIN_VERSION);
+            result.put("sdkInt", Build.VERSION.SDK_INT);
+            result.put("actions", new JSONArray(java.util.Arrays.asList(ALL_ACTIONS)));
+            JSONObject permissions = new JSONObject();
+            permissions.put("requestIgnoreBatteryOptimizations",
+                manifestDeclares(ctx, android.Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS));
+            permissions.put("postNotifications",
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || manifestDeclares(ctx, "android.permission.POST_NOTIFICATIONS"));
+            permissions.put("activityRecognition", manifestDeclares(ctx, "android.permission.ACTIVITY_RECOGNITION"));
+            permissions.put("foregroundServiceHealth", manifestDeclares(ctx, "android.permission.FOREGROUND_SERVICE_HEALTH"));
+            result.put("permissions", permissions);
+            result.put("hasStepCounter", deviceHasStepCounter(ctx.getPackageManager()));
+        } catch (Exception e) {
+            Log.e(TAG, "capabilities failed: " + e.getMessage());
+        }
+        return result;
+    }
+
+    /** @return true when the installed APK's manifest requests `permission`. */
+    static boolean manifestDeclares(Context ctx, String permission) {
+        try {
+            android.content.pm.PackageInfo info = ctx.getPackageManager().getPackageInfo(ctx.getPackageName(), PackageManager.GET_PERMISSIONS);
+            if (info.requestedPermissions == null) return false;
+            for (String declared : info.requestedPermissions) {
+                if (permission.equals(declared)) return true;
+            }
+        } catch (Exception e) {
+            Log.w("CordovaStepCounter", "getPackageInfo failed: " + e.getMessage());
+        }
+        return false;
     }
 
     //endregion

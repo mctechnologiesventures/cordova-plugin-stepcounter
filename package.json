@@ -1,6 +1,6 @@
 {
   "name": "cordova-plugin-mc-stepcounter",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "cordova": {
     "id": "cordova-plugin-mc-stepcounter",
     "platforms": [

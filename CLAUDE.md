@@ -34,7 +34,7 @@ cordova plugin add https://github.com/DigitalsunrayMedia/cordova-plugin-stepcoun
 ### Core Components
 
 **JavaScript Interface (`www/stepcounter.js`)**
-- Exports stepcounter module with methods: start(), stop(), getTodayStepCount(), getStepCount(), deviceCanCountSteps(), getHistory(), getLogs(), clearLogs(), isServiceRunning(), isIgnoringBatteryOptimizations(), requestIgnoreBatteryOptimizations(), getOemGuide(), openOemSettings(), getStorageInfo()
+- Exports stepcounter module with methods: start(), stop(), getTodayStepCount(), getStepCount(), deviceCanCountSteps(), getHistory(), getLogs(), clearLogs(), isServiceRunning(), isIgnoringBatteryOptimizations(), requestIgnoreBatteryOptimizations(), getOemGuide(), openOemSettings(), getStorageInfo(), getCapabilities()
 - All methods use cordova.exec() to communicate with native Android code
 - Handles JSON parsing for history data
 

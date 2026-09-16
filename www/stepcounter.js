@@ -146,6 +146,21 @@ module.exports = {
     );
   },
 
+  // What this native build supports: { version, sdkInt, actions: [...], permissions: { requestIgnoreBatteryOptimizations,
+  // postNotifications, activityRecognition, foregroundServiceHealth }, hasStepCounter }. Older native builds
+  // reject with "Invalid action"; treat that as "no capabilities".
+  getCapabilities: function (successCallback, errorCallback) {
+    cordova.exec(
+      function (result) {
+        successCallback(parseObject(result));
+      },
+      errorCallback,
+      "CordovaStepCounter",
+      "get_capabilities",
+      []
+    );
+  },
+
   isIgnoringBatteryOptimizations: function (successCallback, errorCallback) {
     cordova.exec(
       function (res) {

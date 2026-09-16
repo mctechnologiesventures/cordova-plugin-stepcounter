@@ -76,6 +76,10 @@ Edit `www/js/index.html` and add the following code inside `onDeviceReady`
     stepcounter.getOemGuide(success, failure);          // {manufacturer, model, oem, autostartResolvable, batteryResolvable}
     stepcounter.openOemSettings('autostart', success, failure); // or 'battery'; falls back to the app details page
 
+    // Capability gate: call this before offering battery / OEM / service UI. Older native builds reject it.
+    // {version, sdkInt, actions:[...], permissions:{requestIgnoreBatteryOptimizations, postNotifications, ...}, hasStepCounter}
+    stepcounter.getCapabilities(success, failure);
+
     // Storage diagnostics (see TESTING.md)
     stepcounter.getStorageInfo(success, failure);
 
@@ -109,6 +113,12 @@ whole file with one flag, which is how devices lost their entire history. The fi
 0.2.0 copies the legacy file into SQLite (insert-or-ignore, never overwriting DB rows), keeps the
 file read-only for 30 days as a fallback, then deletes it. A legacy file that exists but reads
 back empty is retried on later opens instead of being treated as "nothing to migrate".
+
+## Changes in 0.2.4
+- `getCapabilities()` reports the plugin version, its actions and which permissions the installed
+  manifest declares, so the app can gate UI without probing actions.
+- `requestIgnoreBatteryOptimizations` refuses with `permission_not_declared` when the manifest
+  lacks `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` instead of firing the intent.
 
 ## Changes in 0.2.3
 - The service calls `startForeground()` first thing in `onCreate()`, before the store is opened, so
