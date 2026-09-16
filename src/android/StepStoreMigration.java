@@ -46,6 +46,7 @@ class StepStoreMigration {
     static final String META_CONFLICTS = "legacy_conflicts";
     static final String META_ATTEMPTS = "migration_attempts";
     static final String META_DELETED_AT = "legacy_deleted_at";
+    static final String META_RECONCILED_AT = "legacy_reconciled_at";
 
     static final String STATUS_MIGRATED = "migrated";
     static final String STATUS_EMPTY = "empty";
@@ -99,6 +100,11 @@ class StepStoreMigration {
             String migratedAt = store.getMeta(db, META_MIGRATED_AT);
 
             if (migratedAt != null) {
+                if (store.getMeta(db, META_RECONCILED_AT) == null) {
+                    // Devices migrated by 0.2.0-0.2.5 may carry a day row ahead of its hourly rows.
+                    report.put("reconciledDays", reconcileDaysWithHours(store, db, now));
+                    store.setMeta(db, META_RECONCILED_AT, String.valueOf(now));
+                }
                 maybeDeleteLegacy(context, store, db, migratedAt, now);
                 report.put("status", "already_migrated");
                 report.put("legacyStatus", store.getMeta(db, META_STATUS));
@@ -133,6 +139,8 @@ class StepStoreMigration {
                 if (legacy.total != null && store.getMeta(db, StepStore.META_TOTAL_COUNT) == null) {
                     store.setMeta(db, StepStore.META_TOTAL_COUNT, String.valueOf(legacy.total));
                 }
+                report.put("reconciledDays", reconcileDaysWithHours(store, db, now));
+                store.setMeta(db, META_RECONCILED_AT, String.valueOf(now));
                 markMigrated(store, db, now, STATUS_MIGRATED, legacy, conflicts);
                 report.put("status", STATUS_MIGRATED);
                 report.put("inserted", inserted);
@@ -158,6 +166,7 @@ class StepStoreMigration {
                 }
             } else {
                 markMigrated(store, db, now, STATUS_EMPTY, legacy, 0);
+                store.setMeta(db, META_RECONCILED_AT, String.valueOf(now));
                 report.put("status", STATUS_EMPTY);
                 store.log("INFO", TAG, "No legacy step data in " + prefsName + " (exists=" + legacy.fileExists +
                         " size=" + legacy.fileSize + ")");
@@ -176,6 +185,65 @@ class StepStoreMigration {
             db.endTransaction();
         }
         return report;
+    }
+
+    /**
+     * The old store updated the day row and the hour row in separate full-file commits, and under
+     * its multi-process race an hourly write could be lost while the day write survived. The app
+     * scores competitions from the hourly rows, so such a day shows fewer steps in the competition
+     * than in the notification.
+     *
+     * Repair: add the deficit to the day's latest hour row and set that row's offset so that it
+     * implies the same sensor position as the day row (`offset + steps - buffer`, the value later
+     * periods inherit their baseline from and the live formula recomputes from). This is exact for
+     * a stale closed hour (its offset stays), keeps a live current hour from flagging an anomaly,
+     * and makes the next hour start at the right sensor value. Works on database rows, so it also
+     * repairs devices migrated before this check existed; days written by the new store are
+     * consistent by construction and are left alone.
+     *
+     * @return number of days adjusted
+     */
+    static int reconcileDaysWithHours(StepStore store, SQLiteDatabase db, long now) {
+        int adjusted = 0;
+        List<String[]> days = new ArrayList<>();
+        try (android.database.Cursor c = db.rawQuery("SELECT key, steps, step_offset, buffer FROM period WHERE kind=?", new String[]{StepStore.KIND_DAY})) {
+            while (c.moveToNext()) {
+                days.add(new String[]{c.getString(0), String.valueOf(c.getInt(1)), String.valueOf(c.getInt(2)), String.valueOf(c.getInt(3))});
+            }
+        }
+        for (String[] day : days) {
+            String dayKey = day[0];
+            int daySteps = Integer.parseInt(day[1]);
+            int dayOffset = Integer.parseInt(day[2]);
+            int dayBuffer = Integer.parseInt(day[3]);
+            int sensorNow = dayOffset + daySteps - dayBuffer;
+
+            int hourSum = 0;
+            String lastHourKey = null;
+            try (android.database.Cursor c = db.rawQuery("SELECT key, steps FROM period WHERE kind=? AND key LIKE ? ORDER BY key",
+                    new String[]{StepStore.KIND_HOUR, dayKey + " %"})) {
+                while (c.moveToNext()) {
+                    hourSum += c.getInt(1);
+                    lastHourKey = c.getString(0);
+                }
+            }
+            int deficit = daySteps - hourSum;
+            if (deficit <= 0) continue;
+
+            if (lastHourKey == null) {
+                // No hourly row at all for a day that counted steps: park them in the day's first hour.
+                lastHourKey = dayKey + " 00";
+                store.putPeriod(db, StepStore.KIND_HOUR, lastHourKey, deficit, sensorNow - deficit + dayBuffer, dayBuffer, now);
+            } else {
+                StepStore.PeriodRow target = store.getPeriod(db, StepStore.KIND_HOUR, lastHourKey);
+                int newSteps = target.steps + deficit;
+                store.putPeriod(db, StepStore.KIND_HOUR, lastHourKey, newSteps, sensorNow - newSteps + target.buffer, target.buffer, now);
+            }
+            store.log("WARN", TAG, "Legacy reconcile: day " + dayKey + " had " + daySteps + " steps but hours summed " + hourSum +
+                    "; added " + deficit + " to hour " + lastHourKey);
+            adjusted++;
+        }
+        return adjusted;
     }
 
     private static void markMigrated(StepStore store, SQLiteDatabase db, long now, String status, LegacySnapshot legacy, int conflicts) {

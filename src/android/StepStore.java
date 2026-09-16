@@ -14,7 +14,6 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
@@ -172,15 +171,24 @@ public class StepStore extends SQLiteOpenHelper {
         return new SimpleDateFormat(pattern, Locale.getDefault()).format(date);
     }
 
-    static Date previousPeriod(String kind, Date now) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(now);
-        if (KIND_HOUR.equals(kind)) {
-            calendar.add(Calendar.HOUR_OF_DAY, -1);
-        } else {
-            calendar.add(Calendar.DATE, -1);
+    /**
+     * The most recent row of `kind` before `key`, whatever the gap. Keys are fixed-width local
+     * timestamps, so lexicographic order is chronological.
+     *
+     * The legacy store only looked one period back ("previous hour" / "yesterday"). After an hour
+     * without a sensor batch (phone idle) the next hour therefore started from the current sensor
+     * value and every step since the last recorded hour dropped out of the hourly history, while
+     * the day row kept them: competitions (hourly sums) ran behind the notification (day row).
+     */
+    @Nullable
+    private String[] latestBefore(SQLiteDatabase db, String kind, String key) {
+        try (Cursor c = db.rawQuery("SELECT key, steps, step_offset, buffer FROM period WHERE kind=? AND key<? ORDER BY key DESC LIMIT 1",
+                new String[]{kind, key})) {
+            if (c.moveToFirst()) {
+                return new String[]{c.getString(0), String.valueOf(c.getInt(1)), String.valueOf(c.getInt(2)), String.valueOf(c.getInt(3))};
+            }
         }
-        return calendar.getTime();
+        return null;
     }
 
     /**
@@ -209,14 +217,15 @@ public class StepStore extends SQLiteOpenHelper {
                 buffer += (Math.abs(delta) + 1);
             }
         } else {
-            String previousKey = formatKey(pattern, previousPeriod(kind, now));
-            PeriodRow previous = getPeriod(db, kind, previousKey);
+            String[] previous = latestBefore(db, kind, currentKey);
             newPeriod = true;
             if (previous != null) {
-                offset = previous.offset + previous.steps;
-                buffer = previous.buffer;
+                // Baseline = sensor value at the end of the latest recorded period, so the steps
+                // since then belong to this period and periods keep summing to the day.
+                offset = Integer.parseInt(previous[2]) + Integer.parseInt(previous[1]);
+                buffer = Integer.parseInt(previous[3]);
                 Log.d(TAG, "NEW_PERIOD: kind=" + kind + " sensor=" + steps + " inheritedOffset=" + offset +
-                        " inheritedBuffer=" + buffer + " prev=" + previousKey + " current=" + currentKey);
+                        " inheritedBuffer=" + buffer + " prev=" + previous[0] + " current=" + currentKey);
             } else {
                 offset = steps - oldSteps;
                 Log.d(TAG, "FIRST_RUN: kind=" + kind + " sensor=" + steps + " calculatedOffset=" + offset);

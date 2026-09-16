@@ -60,7 +60,7 @@ public class CordovaStepCounter extends CordovaPlugin {
     private static final String ACTION_OPEN_OEM_SETTINGS = "open_oem_settings";
     private static final String ACTION_GET_CAPABILITIES = "get_capabilities";
 
-    static final String PLUGIN_VERSION = "0.2.5";
+    static final String PLUGIN_VERSION = "0.2.6";
     private static final String[] ALL_ACTIONS = {
         ACTION_START, ACTION_STOP, ACTION_GET_STEPS, ACTION_GET_TODAY_STEPS, ACTION_CAN_COUNT_STEPS, ACTION_GET_HISTORY,
         ACTION_GET_LOGS, ACTION_CLEAR_LOGS, ACTION_IS_SERVICE_RUNNING, ACTION_GET_STORAGE_INFO,

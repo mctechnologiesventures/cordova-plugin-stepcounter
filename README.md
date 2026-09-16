@@ -114,6 +114,17 @@ whole file with one flag, which is how devices lost their entire history. The fi
 file read-only for 30 days as a fallback, then deletes it. A legacy file that exists but reads
 back empty is retried on later opens instead of being treated as "nothing to migrate".
 
+## Changes in 0.2.6
+- A new hour/day row inherits its baseline from the latest earlier row of the same kind, not only
+  from the immediately previous period. After an idle hour the old rule started the next hour at the
+  current sensor value and dropped the steps since the last recorded hour from the hourly history,
+  so competitions (hourly sums) ran behind the notification (day row).
+- On devices already migrated by 0.2.0-0.2.5 the reconciliation runs once on the next open.
+- Migration reconciles each legacy day whose hourly rows sum to less than the day row (an hourly
+  write lost by the old store): the deficit is added to the day's last hour row and its offset is
+  aligned with the day row's sensor position, so competition
+  totals (built from hourly rows) match the notification.
+
 ## Changes in 0.2.5
 - Romanian notification strings now use the plugin's resource names (`mct_sc_notification_*`);
   they were defined under other names, never applied, and made Android lint report ExtraTranslation.
