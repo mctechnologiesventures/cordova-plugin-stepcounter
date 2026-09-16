@@ -114,6 +114,10 @@ whole file with one flag, which is how devices lost their entire history. The fi
 file read-only for 30 days as a fallback, then deletes it. A legacy file that exists but reads
 back empty is retried on later opens instead of being treated as "nothing to migrate".
 
+## Changes in 0.2.5
+- Romanian notification strings now use the plugin's resource names (`mct_sc_notification_*`);
+  they were defined under other names, never applied, and made Android lint report ExtraTranslation.
+
 ## Changes in 0.2.4
 - `getCapabilities()` reports the plugin version, its actions and which permissions the installed
   manifest declares, so the app can gate UI without probing actions.

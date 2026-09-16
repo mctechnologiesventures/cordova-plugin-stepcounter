@@ -1,4 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="notification_title">Contor pași</string>
-    <string name="notification_steps">Pași: %1$d</string>
+    <string name="mct_sc_notification_title">Contor pași</string>
+    <string name="mct_sc_notification_steps">Pași: %1$d</string>
 </resources>

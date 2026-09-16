@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
         id="cordova-plugin-mc-stepcounter"
-        version="0.2.4">
+        version="0.2.5">
 
   <name>Cordova MC Step Counter Plugin</name>
   <repo>https://github.com/mctechnologiesventures/cordova-plugin-stepcounter</repo>
